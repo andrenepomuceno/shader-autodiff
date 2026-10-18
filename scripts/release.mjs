@@ -69,7 +69,7 @@ function main() {
 
   writeFileSync(changelogPath, changelog.text);
   writeFileSync(packagePath, readFileSync(packagePath, 'utf8').replace(/"version": "[^"]*"/, `"version": "${version}"`));
-  run('git', ['commit', '-am', `Release v${version}`]);
+  run('git', ['commit', '-m', `Release v${version}`, '--', 'CHANGELOG.md', 'package.json']);
   run('git', ['tag', '-a', `v${version}`, '-m', `v${version}`]);
 
   // Push before publishing, so a published version always has its tag on GitHub; each step that can
