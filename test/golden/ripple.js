@@ -1,12 +1,9 @@
 function f({ x, y, z, a, b, c, d, t }) {
   const t0 = Math.sqrt(x * x + y * y + z * z);
   const t1 = b * t0 - c * t;
-  const t2 = 1 + t0;
-  const t3 = a * Math.sin(t1) / t2;
-  const t4 = 2 * t0;
-  const t5 = x / t4;
-  const t6 = Math.cos(t1);
-  const t7 = y / t4;
-  const t8 = z / t4;
-  return { value: 1 + t3, gradient: [(2 * (a * (b * t5 * t6)) - 2 * (t3 * t5)) / t2, (2 * (a * (t6 * (b * t7))) - 2 * (t3 * t7)) / t2, (2 * (a * (t6 * (b * t8))) - 2 * (t3 * t8)) / t2] };
+  const t2 = Math.sin(t1);
+  const t3 = 1 + t0;
+  const t4 = t0 * t3;
+  const t5 = a * (t2 / t3 - b * Math.cos(t1));
+  return { value: 1 + a * t2 / t3, gradient: [-(x * t5 / t4), -(y * t5 / t4), -(z * t5 / t4)] };
 }
