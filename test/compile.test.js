@@ -93,7 +93,7 @@ test('JS output names are object keys and never collide with symbols', () => {
 
 test('names reserved in any target or shadowing a shader built-in are rejected', () => {
   for (const name of ['target', 'set', 'from', 'ref', 'match', '_', 'mix', 'length', 'dot', 'fract']) {
-    assert.throws(() => compile('1', { variables: [name] }), /reserved/, name);
+    assert.throws(() => compile('1', { variables: [name] }), /reserved|shadows a built-in/, name);
   }
   assert.throws(() => compile('x + 1', { variables: ['x'] }).glsl('sqrt'), /function 'sqrt' shadows a built-in/);
   assert.throws(() => compile('x + 1', { variables: ['x'] }).wgsl('length'), /function 'length' is reserved/);

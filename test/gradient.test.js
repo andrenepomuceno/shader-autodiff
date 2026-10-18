@@ -54,6 +54,8 @@ const CASES = [
   'x / (x + y) / (y + z)',
   '(x - y)^2 * (x - y) + x*x - x*x',
   '3 + a * b',
+  'clamp(x * y, 0.5, 2) + mix(x, z, y / 3) + fract(x * 1.7) * z',
+  'smoothstep(0.2, 2.1, x * y) + step(1, z) * x + exp2(x) + log2(y + z)',
 ];
 
 test('gradients match central differences on a catalogue of expressions', () => {

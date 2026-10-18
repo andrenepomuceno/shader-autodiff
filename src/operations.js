@@ -104,11 +104,15 @@ export const OPERATIONS = {
   },
 };
 
-/** Functions callable from expressions, with their arity. `pow` and `mod` are lowered by the builder. */
+/**
+ * Functions callable from expressions, with their arity. The ones without an operation above are
+ * lowered by the builder into operations, so every target evaluates them identically.
+ */
 export const FUNCTIONS = {
   sin: 1, cos: 1, tan: 1, asin: 1, acos: 1, atan: 1, atan2: 2,
-  sinh: 1, cosh: 1, tanh: 1, exp: 1, log: 1, sqrt: 1,
-  abs: 1, sign: 1, floor: 1, min: 2, max: 2, pow: 2, mod: 2,
+  sinh: 1, cosh: 1, tanh: 1, exp: 1, log: 1, sqrt: 1, exp2: 1, log2: 1,
+  abs: 1, sign: 1, floor: 1, fract: 1, min: 2, max: 2, pow: 2, mod: 2,
+  clamp: 3, mix: 3, step: 2, smoothstep: 3,
 };
 
 export const CONSTANTS = { pi: Math.PI, E: Math.E };

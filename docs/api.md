@@ -121,6 +121,15 @@ Constants: `pi`, `E`.
 | `sign floor` | Derivative 0 (the jumps are ignored) |
 | `min max` | Derivative of the selected argument; at ties one of the one-sided derivatives |
 | `mod(a, b)` | Lowered to `a - b * floor(a / b)` (GLSL semantics, in every target) |
+| `fract(a)` | `a - floor(a)` |
+| `exp2(a)`, `log2(a)` | `pow(2, a)` and `log(a) / ln 2` |
+| `clamp(x, lo, hi)` | `min(max(x, lo), hi)` |
+| `mix(a, b, t)` | `a + (b - a) * t` |
+| `step(edge, x)` | `x < edge ? 0 : 1`, derivative 0 |
+| `smoothstep(e0, e1, x)` | `t = clamp((x - e0) / (e1 - e0), 0, 1)`, then `t * t * (3 - 2 * t)` |
+
+Functions without a native counterpart in every target are lowered into the operations above, so
+GLSL, WGSL and JS evaluate the same formula (not the driver's own `mix` or `smoothstep`).
 
 ## Limits and errors
 

@@ -75,6 +75,31 @@ export function createProgram({ variables = [], parameters = [], derived = {}, l
         const [a, b] = args;
         return graph.sub(a, graph.mul(b, graph.apply('floor', [graph.div(a, b)])));
       }
+      case 'fract':
+        return graph.sub(args[0], graph.apply('floor', args));
+      case 'exp2':
+        return graph.apply('pow', [graph.constant(2), args[0]]);
+      case 'log2':
+        return graph.div(graph.apply('log', args), graph.constant(Math.LN2));
+      case 'clamp': {
+        const [x, low, high] = args;
+        return graph.apply('min', [graph.apply('max', [x, low]), high]);
+      }
+      case 'mix': {
+        const [a, b, t] = args;
+        return graph.add(a, graph.mul(graph.sub(b, a), t));
+      }
+      case 'step': {
+        const [edge, x] = args;
+        return graph.apply('select', [x, edge, graph.constant(0), graph.constant(1)]);
+      }
+      // t = clamp((x − e0) / (e1 − e0), 0, 1); t²·(3 − 2t)
+      case 'smoothstep': {
+        const [edge0, edge1, x] = args;
+        const ratio = graph.div(graph.sub(x, edge0), graph.sub(edge1, edge0));
+        const t = graph.apply('min', [graph.apply('max', [ratio, graph.constant(0)]), graph.constant(1)]);
+        return graph.mul(graph.mul(t, t), graph.sub(graph.constant(3), graph.mul(graph.constant(2), t)));
+      }
       default:
         return graph.apply(node.name, args);
     }
