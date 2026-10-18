@@ -1,5 +1,7 @@
 # shader-autodiff
 
+**English** · [Português (Brasil)](README.pt-BR.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
+
 Turn a math expression typed at runtime into GLSL/WGSL that computes its value **and exact
 derivatives** in one pass, plus a matching JavaScript evaluator for the CPU. No CAS, no build step,
 no dependencies, about 15 kB.
