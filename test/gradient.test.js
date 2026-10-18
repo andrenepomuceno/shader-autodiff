@@ -105,7 +105,7 @@ test('gradients match central differences on random smooth expressions', () => {
 test('derivatives that do not depend on a variable are pruned to zero', () => {
   const compiled = compile('sin(x) * a', { variables: VARIABLES, parameters: PARAMETERS });
   assert.deepEqual(compiled.evaluate({ x: 0, y: 1, z: 2, a: 2, b: 0 }).gradient, [2, 0, 0]);
-  assert.match(compiled.glsl('f'), /grad = vec3\(a \* cos\(p\.x\), 0\.0, 0\.0\);/);
+  assert.match(compiled.glsl('f'), /gradient = vec3\(a \* cos\(p\.x\), 0\.0, 0\.0\);/);
 });
 
 test('emitted JavaScript agrees with the interpreter', () => {
@@ -117,5 +117,49 @@ test('emitted JavaScript agrees with the interpreter', () => {
       const env = { x: 0.3 + 2 * next(), y: 0.3 + 2 * next(), z: 0.3 + 2 * next(), a: next(), b: 0.5 + next() };
       assert.deepEqual(emitted(env), compiled.evaluate(env), text);
     }
+  }
+});
+
+test('Hessians match central differences of the gradient and are symmetric', () => {
+  const next = random(3);
+  for (const text of CASES) {
+    const second = compile(text, { variables: VARIABLES, parameters: PARAMETERS, order: 2 });
+    for (let trial = 0; trial < 5; trial += 1) {
+      const env = { x: 0.3 + 2 * next(), y: 0.3 + 2 * next(), z: 0.3 + 2 * next(), a: next(), b: 0.5 + next() };
+      const { hessian, gradient } = second.evaluate(env);
+      assert.deepEqual(gradient, compile(text, { variables: VARIABLES, parameters: PARAMETERS }).evaluate(env).gradient);
+      VARIABLES.forEach((name, column) => {
+        const h = 1e-5 * Math.max(1, Math.abs(env[name]));
+        const plus = second.evaluate({ ...env, [name]: env[name] + h }).gradient;
+        const minus = second.evaluate({ ...env, [name]: env[name] - h }).gradient;
+        VARIABLES.forEach((_, row) => {
+          const expected = (plus[row] - minus[row]) / (2 * h);
+          const tolerance = 1e-4 * Math.max(1, Math.abs(expected));
+          assert.ok(Math.abs(hessian[row][column] - expected) <= tolerance, `H[${row}][${column}] of ${text}: ${hessian[row][column]} vs ${expected}`);
+          assertClose(hessian[row][column], hessian[column][row], `symmetry of ${text}`);
+        });
+      });
+    }
+  }
+});
+
+test('Jacobian rows are the gradients of each output', () => {
+  const sources = { X: 'x * cos(y)', Y: 'x * sin(y)', Z: 'z + a * x', W: 'exp(x - z)' };
+  const jacobian = compile(sources, { variables: VARIABLES, parameters: PARAMETERS });
+  const env = { x: 1.3, y: 0.4, z: -0.2, a: 0.7, b: 0 };
+  const result = jacobian.evaluate(env);
+  Object.values(sources).forEach((text, row) => {
+    const single = compile(text, { variables: VARIABLES, parameters: PARAMETERS }).evaluate(env);
+    assert.equal(result.value[row], single.value);
+    assert.deepEqual(result.jacobian[row], single.gradient);
+  });
+});
+
+test('emitted JavaScript agrees with the interpreter for Hessians and Jacobians', () => {
+  const env = { x: 0.9, y: 1.7, z: 0.4, a: 0.3, b: 1.1 };
+  for (const [source, order] of [['x*y*z + sin(x*y) / (1 + z*z)', 2], [{ X: 'x*y', Y: 'y*z', Z: 'z*x + b' }, 1], [{ U: 'x + y' }, 1]]) {
+    const compiled = compile(source, { variables: VARIABLES, parameters: PARAMETERS, order });
+    const emitted = new Function(`return ${compiled.js('f')}`)();
+    assert.deepEqual(emitted(env), compiled.evaluate(env));
   }
 });

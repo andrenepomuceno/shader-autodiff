@@ -7,14 +7,13 @@ const BINARY = { add: ['+', SUM], sub: ['-', SUM], mul: ['*', PRODUCT], div: ['/
 
 const LEAVES = new Set(['const', 'var', 'param']);
 
-export const TEMPORARY = /^t\d+$/;
-
 /**
  * Lowers the graph reachable from `roots` to straight-line code. Nodes used more than once become
  * temporaries t0, t1, … in topological order; everything else is inlined. Operands are parenthesised
  * whenever the evaluation order would otherwise change, so every target evaluates the same DAG.
  *
- * `target` supplies `literal(value)`, `symbol(node)` and `call(op, args)`.
+ * `target` supplies `literal(value)`, `symbol(node)`, `call(op, args)` and `select(a, b, c, d)`,
+ * which renders `a < b ? c : d` as an atom.
  */
 export function lower(graph, roots, target) {
   const order = graph.reachable(roots);
@@ -40,8 +39,7 @@ export function lower(graph, roots, target) {
       case 'neg':
         return [`-${wrap(rendered.get(node.args[0]), UNARY + 1)}`, UNARY];
       case 'select': {
-        const [a, b, c, d] = node.args.map((arg) => rendered.get(arg)[0]);
-        return [`(${a} < ${b} ? ${c} : ${d})`, ATOM];
+        return [target.select(...node.args.map((arg) => rendered.get(arg)[0])), ATOM];
       }
       default: {
         if (node.op in BINARY) {

@@ -1,39 +1,77 @@
-import { build } from './build.js';
-import { gradient } from './differentiate.js';
-import { evaluateGraph } from './evaluate.js';
-import { emitGlsl } from './glsl.js';
-import { emitJavaScript } from './javascript.js';
+import { createProgram, checkIdentifier } from './program.js';
 
 export { ExpressionError } from './errors.js';
 export { parse, DEFAULT_LIMITS } from './parser.js';
+export { createProgram };
+
+function vectorType(size) {
+  if (size === 1) return 'float';
+  return size <= 4 ? `vec${size}` : `float[${size}]`;
+}
+
+function matrixType(columns, rows) {
+  if (columns === 1) return vectorType(rows);
+  if (rows === 1) return vectorType(columns);
+  if (columns <= 4 && rows <= 4) return columns === rows ? `mat${columns}` : `mat${columns}x${rows}`;
+  return `float[${columns * rows}]`;
+}
 
 /**
- * Compiles an expression into an object that emits GLSL and JavaScript computing its value and,
- * for `order: 1`, its gradient with respect to `variables`.
+ * Compiles one expression (value, gradient, Hessian) or an object of named expressions (values and
+ * Jacobian) into an object that evaluates them in JS and emits GLSL, WGSL and JS.
  */
-export function compile(text, { variables = [], parameters = [], derived = {}, order = 1, limits = {} } = {}) {
-  if (order !== 0 && order !== 1) throw new RangeError(`order ${order} is not supported yet (use 0 or 1)`);
-  const built = build(text, { variables, parameters, derived, limits });
-  const compiled = {
-    graph: built.graph,
-    root: built.root,
-    gradient: order === 1 ? gradient(built.graph, built.root, built.variables) : null,
-    variableNames: [...variables],
-    parameterNames: [...parameters],
-  };
+export function compile(source, { variables = [], parameters = [], derived = {}, order = 1, limits = {} } = {}) {
+  if (order !== 0 && order !== 1 && order !== 2) throw new RangeError(`order ${order} is not supported (use 0, 1 or 2)`);
+  const multiple = typeof source === 'object' && source !== null;
+  const names = multiple ? Object.keys(source) : null;
+  if (multiple) {
+    if (names.length === 0) throw new TypeError('no expressions to compile');
+    names.forEach((name) => checkIdentifier(name, 'output'));
+    if (order === 2) throw new RangeError('order 2 needs a single expression');
+  }
+  const program = createProgram({ variables, parameters, derived, limits });
+  const values = multiple ? names.map((name) => program.expression(source[name], name)) : [program.expression(source)];
+  const count = variables.length;
+  const differentiate = (value) => variables.map((variable) => program.derivative(value, variable));
 
+  const spec = { returns: null, outputs: [] };
+  if (multiple) {
+    spec.outputs.push({ name: 'value', type: vectorType(values.length), components: values, shape: [values.length] });
+    if (order >= 1 && count > 0) {
+      const columns = variables.map((variable) => values.map((value) => program.derivative(value, variable)));
+      spec.outputs.push({
+        name: 'jacobian',
+        type: matrixType(count, values.length),
+        components: columns.flat(),
+        shape: [values.length, count],
+      });
+    }
+  } else {
+    const [value] = values;
+    spec.returns = { type: 'float', components: [value] };
+    if (order >= 1 && count > 0) {
+      const gradient = differentiate(value);
+      spec.outputs.push({ name: 'gradient', type: vectorType(count), components: gradient, shape: [count] });
+      if (order === 2) {
+        spec.outputs.push({
+          name: 'hessian',
+          type: matrixType(count, count),
+          components: gradient.flatMap(differentiate),
+          shape: [count, count],
+        });
+      }
+    }
+  }
+
+  const emitSpec = (name, options = {}) => ({ ...spec, name, parameters: options.parameters ?? {} });
   return {
     order,
-    variables: compiled.variableNames,
-    parameters: compiled.parameterNames,
-    glsl: (name, options) => emitGlsl(compiled, name, options),
-    js: (name) => emitJavaScript(compiled, name),
-    evaluate(env) {
-      const derivatives = compiled.gradient ?? [];
-      const live = derivatives.filter((id) => id !== null);
-      const [value, ...values] = evaluateGraph(compiled.graph, [compiled.root, ...live], env);
-      if (!compiled.gradient) return { value };
-      return { value, gradient: derivatives.map((id) => (id === null ? 0 : values.shift())) };
-    },
+    variables: [...variables],
+    parameters: [...parameters],
+    outputs: names,
+    glsl: (name, options) => program.glsl(emitSpec(name, options)),
+    wgsl: (name, options) => program.wgsl(emitSpec(name, options)),
+    js: (name) => program.js(emitSpec(name)),
+    evaluate: (env) => program.evaluateFunction(spec, env),
   };
 }

@@ -19,7 +19,7 @@ g.wgsl('conformal')
 g.evaluate({ x, y, z, a, b, t })        // { value, gradient, hessian? } in JS, same AST
 ```
 
-Implemented so far: parser, JS evaluator and emitter, GLSL ES 3.00 emitter, orders 0 and 1. See
+Implemented so far: parser, JS evaluator, GLSL ES 3.00, WGSL and JS emitters, orders 0–2, Jacobian mode. See
 [docs/api.md](docs/api.md) for the current API and the emitted code contract.
 
 ## Why

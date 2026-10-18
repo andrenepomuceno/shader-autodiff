@@ -62,8 +62,26 @@ test('declared names are validated', () => {
   assert.throws(() => compile('x', { variables: ['x'], parameters: ['new'] }), /reserved/);
 });
 
-test('order 2 is not available yet', () => {
-  assert.throws(() => compile('x', { variables: ['x'], order: 2 }), /order 2 is not supported/);
+test('unsupported orders and shapes are rejected', () => {
+  assert.throws(() => compile('x', { variables: ['x'], order: 3 }), /order 3 is not supported/);
+  assert.throws(() => compile({ X: 'x', Y: 'y' }, { variables: ['x', 'y'], order: 2 }), /needs a single expression/);
+  assert.throws(() => compile({}, { variables: ['x'] }), /no expressions/);
+  assert.throws(() => compile({ 'not valid': 'x' }, { variables: ['x'] }), /invalid output name/);
+});
+
+test('errors in a named expression carry its name as source', () => {
+  rejects({ X: 'x', Y: 'y +' }, { variables: ['x', 'y'] }, /unexpected end/, { source: 'Y', start: 3 });
+});
+
+test('emitted names may not collide', () => {
+  const compiled = compile('gradient * x', { variables: ['x'], parameters: ['gradient'] });
+  assert.throws(() => compiled.glsl('f'), /output name 'gradient' collides/);
+  assert.doesNotThrow(() => compiled.glsl('f', { parameters: { gradient: 'u_gradient' } }));
+  const packed = compile('p * x + y', { variables: ['x', 'y'], parameters: ['p'] });
+  assert.throws(() => packed.glsl('f'), /collides/);
+  assert.doesNotThrow(() => packed.js('f'));
+  assert.throws(() => compile('x', { variables: ['x'] }).glsl('x'), /function name 'x' collides/);
+  assert.throws(() => compile('x', { variables: ['x'] }).glsl('fn'), /invalid function name/);
 });
 
 test('evaluate requires every symbol it reads', () => {

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { compile } from '../src/index.js';
-import { glslFloat } from '../src/glsl.js';
+import { glslFloat } from '../src/targets.js';
 
 const UPDATE = process.env.UPDATE_GOLDEN === '1';
 
@@ -27,12 +27,17 @@ const CASES = {
   'one-variable': ['x^3 - 2*x + atan2(1, x)', { variables: ['x'] }],
   'five-variables': ['u*v + w*sinh(s) - q^2', { variables: ['u', 'v', 'w', 's', 'q'] }],
   'value-only': ['sqrt(x*x + y*y) - 1', { variables: ['x', 'y'], order: 0 }],
+  hessian: ['x*x*y + sin(y)', { variables: ['x', 'y'], order: 2 }],
+  'hessian-one-variable': ['exp(x) * x', { variables: ['x'], order: 2 }],
+  jacobian: [{ X: 'x*cos(y)', Y: 'x*sin(y)', Z: 'a*x' }, { variables: ['x', 'y'], parameters: ['a'] }],
+  'jacobian-five': [{ A: 'u*v', B: 'w + s*q' }, { variables: ['u', 'v', 'w', 's', 'q'] }],
 };
 
 for (const [name, [text, options]] of Object.entries(CASES)) {
   test(`golden ${name}`, () => {
     const compiled = compile(text, options);
     golden(`${name}.glsl`, compiled.glsl('f', UNIFORMS));
+    golden(`${name}.wgsl`, compiled.wgsl('f', UNIFORMS));
     golden(`${name}.js`, compiled.js('f'));
   });
 }

@@ -15,9 +15,13 @@ extends false finally for function if implements import in instanceof interface 
 private protected public return static super switch this throw true try typeof var void while with
 yield arguments eval undefined NaN Infinity Math`;
 
-const OUTPUT = 'p grad';
+const WGSL = `alias bitcast bool const_assert continuing diagnostic discard enable f16 f32 fn i32 let loop
+override ptr requires select struct u32 var array atomic sampler sampler_comparison texture_1d
+texture_2d texture_2d_array texture_3d texture_cube texture_cube_array texture_multisampled_2d
+texture_depth_2d function private storage workgroup read write read_write self type unsafe module
+mat2x2 mat2x3 mat2x4 mat3x2 mat3x3 mat3x4 mat4x2 mat4x3 mat4x4 vec2 vec3 vec4 handle`;
 
-export const RESERVED = new Set(`${GLSL} ${JAVASCRIPT} ${OUTPUT}`.split(/\s+/));
+export const RESERVED = new Set(`${GLSL} ${WGSL} ${JAVASCRIPT}`.split(/\s+/));
 
 export function isReserved(name) {
   return RESERVED.has(name) || /^t\d+$/.test(name) || name.startsWith('gl_') || name.includes('__');
