@@ -24,11 +24,21 @@
   to `1 + |reference|`; the largest observed error is 1e-12. Regenerate with
   `<metric-shaders>/.venv/Scripts/python -B tools/sympy/random-expressions.py --out test/fixtures/sympy-random.json`.
 
-## GPU agreement (manual)
+## GPU agreement
 
 ```bash
-node tools/gpu/serve.mjs      # then open http://127.0.0.1:8137/tools/gpu/
+npm run test:gpu                         # headless Chrome on the default GPU; exit code 1 on failure
+npm run test:gpu -- --adapter=GPU2       # pick a GPU by its chrome://gpu index or a unique name part
+node tools/gpu/check.mjs --list          # the GPUs Chrome can use
+node tools/gpu/serve.mjs                 # or open http://127.0.0.1:8137/tools/gpu/ in a browser
 ```
+
+`tools/gpu/check.mjs` starts the static server, runs the agreement page and the TSL page in a separate
+headless Chrome (its own temporary profile, no window, no extension) through the DevTools protocol,
+prints their logs and fails if either fails. `--adapter` resolves the GPU to its LUID at run time and
+passes `--use-adapter-luid` to Chrome, which both WebGL (ANGLE) and WebGPU (Dawn) honour; on a
+machine with a second, monitorless GPU this keeps checks and benchmarks off the desktop's GPU. The
+whole check takes about 15 s.
 
 The page compiles everything in the browser and reads results back from the GPU in float32:
 

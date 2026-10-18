@@ -3,7 +3,7 @@
 Releases are cut locally; there is no CI (no GitHub Actions minutes are used).
 
 1. Make sure `CHANGELOG.md` has the notes under `## Unreleased`.
-2. Optionally re-run the GPU check (`node tools/gpu/serve.mjs`, open `/tools/gpu/`, expect `PASS`).
+2. Run the GPU check: `npm run test:gpu` (add `-- --adapter=GPU2` to use a monitorless GPU).
 3. Log in to npm once: `npm login` (2FA prompts appear during publish).
 4. Dry run, which changes nothing and shows the tarball contents and the release notes:
 

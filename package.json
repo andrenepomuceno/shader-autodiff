@@ -24,6 +24,8 @@
   "files": ["src", "types/index.d.ts"],
   "scripts": {
     "test": "node --test",
+    "test:gpu": "node tools/gpu/check.mjs",
+    "bench:gpu": "node tools/gpu/check.mjs --bench",
     "release": "node scripts/release.mjs"
   },
   "engines": {

@@ -1,0 +1,43 @@
+// Dev-only: runs the GPU pages headless and reports, with no browser window or extension.
+//
+//   node tools/gpu/check.mjs [--adapter=<GPUn|name>]            GLSL/WGSL and TSL agreement; exit 1 on failure
+//   node tools/gpu/check.mjs --bench [--adapter=<GPUn|name>]    benchmark tables (Markdown) on stdout
+//   node tools/gpu/check.mjs --list                             GPUs Chrome can use
+import { listAdapters, parseArguments, runPage } from './run.mjs';
+import { startServer } from './serve.mjs';
+
+const options = parseArguments(process.argv.slice(2));
+const mode = options.positional.find((argument) => argument.startsWith('--')) ?? '--check';
+
+if (mode === '--list') {
+  for (const adapter of await listAdapters(options)) {
+    console.log(`GPU${adapter.index}  ${adapter.name}${adapter.active ? '  (default)' : ''}`);
+  }
+  process.exit(0);
+}
+
+const server = await startServer(0);
+const base = `http://127.0.0.1:${server.address().port}/tools/gpu`;
+let failed = false;
+try {
+  if (mode === '--bench') {
+    console.log(await runPage(`${base}/bench.html`, 'window.benchResults?.done ? window.benchResults.markdown : null', { ...options, timeout: 1200 }));
+  } else {
+    const agreement = await runPage(`${base}/`, `window.gpuResults?.done ? {
+      error: window.gpuResults.error ?? null,
+      failures: window.gpuResults.failures ?? [],
+      log: document.getElementById('log').textContent,
+    } : null`, options);
+    console.log(agreement.log);
+    const tsl = await runPage(`${base}/tsl.html`, `window.tslResults?.done ? {
+      error: window.tslResults.error ?? null,
+      failures: window.tslResults.failures ?? [],
+      log: document.getElementById('log').textContent,
+    } : null`, options);
+    console.log(tsl.log);
+    failed = [agreement, tsl].some((result) => result.error || result.failures.length > 0);
+  }
+} finally {
+  server.close();
+}
+process.exit(failed ? 1 : 0);
