@@ -12,9 +12,13 @@ export function glslFloat(value) {
 }
 
 /** A literal for a 32-bit float shader; constants that do not fit are an error, not an infinity. */
-function shaderFloat(value) {
+export function checkFloat32(value) {
   if (Math.abs(value) > FLOAT32_MAX) throw new RangeError(`constant ${value} does not fit in a 32-bit float`);
-  return glslFloat(value);
+  return value;
+}
+
+function shaderFloat(value) {
+  return glslFloat(checkFloat32(value));
 }
 
 export function vectorType(size) {

@@ -1,13 +1,24 @@
+import { checkFloat32 } from './targets.js';
+
 const COMPONENTS = ['x', 'y', 'z', 'w'];
 const DIRECT = new Set(['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'exp', 'log', 'sqrt', 'abs', 'sign', 'floor', 'min', 'max', 'pow']);
 const OPERATORS = { add: 'add', sub: 'sub', mul: 'mul', div: 'div' };
 
-/** Reads variable `index` from the caller's inputs: a TSL vector node, an array, or an object by name. */
+function isPlainObject(value) {
+  const prototype = value === null || typeof value !== 'object' ? undefined : Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+/**
+ * Reads variable `index` from the caller's inputs: an array, a plain object by name, or a TSL node
+ * (the node itself for one variable, its x/y/z/w components for 2–4).
+ */
 function variableNode(inputs, name, index, count) {
+  if (inputs === undefined || inputs === null) return undefined;
   if (Array.isArray(inputs)) return inputs[index];
-  if (inputs && Object.hasOwn(inputs, name)) return inputs[name];
-  if (inputs && count >= 2 && count <= 4) return inputs[COMPONENTS[index]];
-  if (inputs && count === 1) return inputs;
+  if (isPlainObject(inputs)) return Object.hasOwn(inputs, name) ? inputs[name] : undefined;
+  if (count === 1) return inputs;
+  if (count >= 2 && count <= 4) return inputs[COMPONENTS[index]];
   return undefined;
 }
 
@@ -25,7 +36,7 @@ export function buildTsl(graph, roots, TSL, { variables, inputs, parameters = {}
     let result;
     switch (node.op) {
       case 'const':
-        result = TSL.float(node.value);
+        result = TSL.float(checkFloat32(node.value));
         break;
       case 'var':
         result = variableNode(inputs, node.name, node.index, variables.length);
@@ -64,12 +75,7 @@ export function buildTsl(graph, roots, TSL, { variables, inputs, parameters = {}
   return roots.map((root) => nodes.get(root));
 }
 
-/** Packs TSL scalar nodes into the TSL value for a shader type (float, vecN, matN, else an array). */
+/** Packs TSL scalar nodes into one TSL node of a shader type: float, vecN or matN (column-major). */
 export function packTsl(TSL, type, components) {
-  if (type === 'float') return components[0];
-  const vector = /^vec([234])$/.exec(type);
-  if (vector) return TSL[`vec${vector[1]}`](...components);
-  const matrix = /^mat([234])$/.exec(type);
-  if (matrix) return TSL[`mat${matrix[1]}`](...components);
-  return components;
+  return type === 'float' ? components[0] : TSL[type](...components);
 }

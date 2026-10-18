@@ -126,3 +126,11 @@ test('structurally equal subexpressions are shared', () => {
   const glsl = compile('sin(x*y) + sin(y*x) + sin(x*y)^2', { variables: ['x', 'y'], order: 0 }).glsl('f');
   assert.equal(glsl.match(/sin\(/g).length, 1);
 });
+
+test('constant factors only merge while the product is an ordinary float32', () => {
+  const big = compile('(1e20*x)*(1e20*y)', { variables: ['x', 'y'] });
+  assert.doesNotThrow(() => big.glsl('f'));
+  assert.equal(big.evaluate({ x: 1e-20, y: 1e-20 }).value, 1e20 * 1e-20 * (1e20 * 1e-20));
+  assert.doesNotMatch(compile('(1e-30*x)*(1e-30*y)', { variables: ['x', 'y'] }).glsl('f'), /e-60/);
+  assert.match(compile('2*(3*x)', { variables: ['x'] }).glsl('f'), /return 6\.0 \* x;/);
+});

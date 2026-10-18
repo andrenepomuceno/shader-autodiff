@@ -84,3 +84,28 @@ test('missing TSL inputs and parameters are reported', () => {
   assert.throws(() => compiled.tsl(NUMERIC_TSL, { parameters: { a: 1 } }), /no TSL input for variable 'x'/);
   assert.throws(() => compiled.tsl(NUMERIC_TSL, { inputs: 1 }), /no TSL node for parameter 'a'/);
 });
+
+test('TSL results follow the shader type: TSL nodes for float/vecN/matN, evaluate shapes otherwise', () => {
+  const square = compile({ X: 'x*y', Y: 'y*z', Z: 'z*x' }, { variables: ['x', 'y', 'z'] });
+  assert.equal(square.tsl(NUMERIC_TSL, { inputs: [1, 2, 3] }).jacobian.kind, 'mat3');
+  const program = createProgram({ variables: ['x', 'y'] });
+  const [a, b, c, d, e, f] = ['1', '2', '3', '4', '5', '6'].map((text) => program.expression(`${text} * x`));
+  const spec = { name: 'm', outputs: [{ name: 'm', type: 'mat2x3', components: [a, b, c, d, e, f] }] };
+  assert.deepEqual(program.tsl(spec, NUMERIC_TSL, { inputs: [1, 0] }), program.evaluateFunction(spec, { x: 1, y: 0 }));
+});
+
+test('a TSL node is read by components even when it has a property named like a variable', () => {
+  class FakeNode {
+    constructor() {
+      this.value = 'not a component';
+      this.x = 2;
+      this.y = 3;
+    }
+  }
+  const compiled = compile('value * y', { variables: ['value', 'y'] });
+  assert.equal(compiled.tsl(NUMERIC_TSL, { inputs: new FakeNode() }).value, 6);
+});
+
+test('TSL constants outside the float32 range throw like the shader emitters', () => {
+  assert.throws(() => compile('x * 1e39', { variables: ['x'] }).tsl(NUMERIC_TSL, { inputs: 1 }), /does not fit in a 32-bit float/);
+});

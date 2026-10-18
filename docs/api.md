@@ -80,8 +80,11 @@ material.normalNode = TSL.transformNormalToView(TSL.normalize(gradient));
 - `inputs`: a vector node for 2–4 variables (`inputs.x`, `inputs.y`, … in variable order), an array
   of scalar nodes, or an object of scalar nodes by variable name.
 - `parameters`: TSL nodes (uniforms) for every parameter the expressions use.
-- Results: `value` and the derivatives as `float`, `vecN` or `matN` nodes; Jacobians and outputs with
-  no TSL type (non-square matrices, more than 4 variables) come back as arrays (of rows) of nodes.
+- Results: outputs whose shader type is `float`, `vecN` or `matN` come back as one TSL node (a square
+  Jacobian is a `matN` node whose column j is ∂F/∂x_j, like in GLSL); other outputs (non-square
+  Jacobians, more than 4 variables) come back shaped like `evaluate`, as arrays or arrays of rows of
+  nodes. A plain object passed as `inputs` is read by variable name; any other object is treated as a
+  TSL node. Constants outside the float32 range throw a `RangeError`, as in GLSL and WGSL.
 - Every graph node becomes one TSL node object, so TSL shares common subexpressions. TSL has no
   hyperbolic functions, so `sinh`, `cosh` and `tanh` are built from `exp` there.
 

@@ -32,7 +32,8 @@ function compareVersions(a, b) {
 }
 
 /** Splits the CHANGELOG into the Unreleased notes and the text with those notes released. */
-export function releaseChangelog(text, version, date) {
+export function releaseChangelog(source, version, date) {
+  const text = source.replace(/\r\n/g, '\n');
   const match = /^## Unreleased\n([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(text);
   if (!match) throw new Error('CHANGELOG.md has no "## Unreleased" section');
   const notes = match[1].trim();
@@ -60,24 +61,39 @@ function main() {
   const changelog = releaseChangelog(readFileSync(changelogPath, 'utf8'), version, date);
   run(process.execPath, ['--test']);
 
+  run(npm, ['publish', '--dry-run', '--access', 'public']);
   if (dryRun) {
-    run(npm, ['publish', '--dry-run', '--access', 'public']);
     console.log(`\nDry run OK. Release notes for v${version}:\n\n${changelog.notes}\n`);
     return;
   }
 
   writeFileSync(changelogPath, changelog.text);
-  writeFileSync(packagePath, `${JSON.stringify({ ...pkg, version }, null, 2)}\n`);
+  writeFileSync(packagePath, readFileSync(packagePath, 'utf8').replace(/"version": "[^"]*"/, `"version": "${version}"`));
   run('git', ['commit', '-am', `Release v${version}`]);
   run('git', ['tag', '-a', `v${version}`, '-m', `v${version}`]);
-  run(npm, ['publish', '--access', 'public']);
-  run('git', ['push', 'origin', 'main', '--follow-tags']);
+
+  // Push before publishing, so a published version always has its tag on GitHub; each step that can
+  // fail says how to resume instead of leaving the repository half released.
+  const githubRelease = `gh release create v${version} --title v${version} --notes-file <notes>`;
+  step(() => run('git', ['push', 'origin', 'main', '--follow-tags']),
+    `push failed; the release commit and tag v${version} are local. Fix it, then run: git push origin main --follow-tags && npm publish --access public && ${githubRelease}`);
+  step(() => run(npm, ['publish', '--access', 'public']),
+    `npm publish failed; v${version} is tagged and pushed. Fix it, then run: npm publish --access public && ${githubRelease}`);
   const notesPath = fileURLToPath(new URL(`.release-notes-${version}.md`, root));
   writeFileSync(notesPath, `${changelog.notes}\n`);
   try {
-    run('gh', ['release', 'create', `v${version}`, '--title', `v${version}`, '--notes-file', notesPath]);
+    step(() => run('gh', ['release', 'create', `v${version}`, '--title', `v${version}`, '--notes-file', notesPath]),
+      `GitHub release failed; v${version} is published. Create it by hand: ${githubRelease}`);
   } finally {
     unlinkSync(notesPath);
+  }
+}
+
+function step(action, recovery) {
+  try {
+    action();
+  } catch {
+    fail(recovery);
   }
 }
 

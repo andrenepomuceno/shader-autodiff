@@ -2,10 +2,9 @@
 
 So other people (three.js users in particular) can use the library.
 
-- Local release script, no GitHub Actions: tests, version bump, CHANGELOG, tag, `npm publish`,
-  GitHub release. Dry-run mode.
-- Package metadata: license, repository, keywords, `exports`, `sideEffects: false`, types
-  (hand-written `.d.ts`), files list; works from a CDN as plain ESM (no build).
-- three.js example: `ShaderMaterial` with a user-typed SDF or height field, normals from the
-  emitted gradient.
-- Decisions for the owner: license, npm name, making the repository public, npm account/2FA.
+Done: MIT license, package metadata and types, local release script (`scripts/release.mjs`,
+docs/releasing.md), three.js example.
+
+Left:
+- Make the GitHub repository public (owner approved on 2026-10-18).
+- Cut v0.1.0 with `npm run release -- 0.1.0` after a dry run; check the CDN import in README works.

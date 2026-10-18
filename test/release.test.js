@@ -25,3 +25,8 @@ test('the repository CHANGELOG is releasable', () => {
   const { notes } = releaseChangelog(readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8'), '9.9.9', 'd');
   assert.ok(notes.length > 0);
 });
+
+test('CRLF changelogs are releasable', () => {
+  const { notes } = releaseChangelog('# C\r\n\r\n## Unreleased\r\n\r\n- Windows.\r\n', '0.2.0', 'd');
+  assert.equal(notes, '- Windows.');
+});

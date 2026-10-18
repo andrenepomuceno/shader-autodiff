@@ -19,8 +19,8 @@ Releases are cut locally; there is no CI (no GitHub Actions minutes are used).
 
    The script checks that `main` is clean and in sync with `origin`, runs `node --test`, moves the
    Unreleased notes under the version, bumps `package.json`, commits `Release v0.1.0`, tags
-   `v0.1.0`, runs `npm publish --access public`, pushes with tags and creates the GitHub release
+   `v0.1.0`, pushes with tags, runs `npm publish --access public` and creates the GitHub release
    with `gh release create`.
 
-If publishing fails after the tag was created, fix the cause and run `npm publish` and
-`git push origin main --follow-tags` by hand; do not re-tag.
+The script pushes the release commit and tag before publishing, so a published version always has
+its tag on GitHub. If a step fails it stops and prints the exact commands to resume; do not re-tag.

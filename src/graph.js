@@ -1,5 +1,13 @@
 import { OPERATIONS } from './operations.js';
 
+const FLOAT32_MIN_NORMAL = 1.1754943508222875e-38;
+const FLOAT32_MAX = 3.4028234663852886e38;
+
+/** Merging constants is only safe when the merged value is still an ordinary float32. */
+function representable(value) {
+  return value === 0 || (Math.abs(value) >= FLOAT32_MIN_NORMAL && Math.abs(value) <= FLOAT32_MAX);
+}
+
 const COMMUTATIVE = new Set(['add', 'mul', 'min', 'max']);
 
 /**
@@ -89,7 +97,10 @@ export class Graph {
         if (a === b) return this.constant(0);
         if (nodeB.op === 'neg') return this.add(a, nodeB.args[0]);
         if (this.constantValue(b) < 0) return this.add(a, this.constant(-nodeB.value));
-        if (this.scaled(b)[0] < 0) return this.add(a, this.mul(this.constant(-this.scaled(b)[0]), this.scaled(b)[1]));
+        {
+          const [factor, rest] = this.scaled(b);
+          if (factor < 0) return this.add(a, this.mul(this.constant(-factor), rest));
+        }
         return undefined;
       case 'mul':
         if (this.isConstant(a, 0) || this.isConstant(b, 0)) return this.constant(0);
@@ -98,7 +109,8 @@ export class Graph {
         if (this.isConstant(a, -1)) return this.neg(b);
         if (this.isConstant(b, -1)) return this.neg(a);
         if (nodeA.op === 'const' && nodeB.op === 'mul' && this.constantValue(nodeB.args[0]) !== undefined) {
-          return this.mul(this.constant(nodeA.value * this.constantValue(nodeB.args[0])), nodeB.args[1]);
+          const merged = nodeA.value * this.constantValue(nodeB.args[0]);
+          if (representable(merged)) return this.mul(this.constant(merged), nodeB.args[1]);
         }
         if (nodeA.op !== 'const') {
           // Constant factors move outwards, where they meet and fold: a·(c·b) = c·(a·b).
@@ -120,7 +132,10 @@ export class Graph {
         return this.hoistNegation('div', nodeA, nodeB);
       case 'neg':
         if (nodeA.op === 'neg') return nodeA.args[0];
-        if (this.scaled(a)[0] !== undefined) return this.mul(this.constant(-this.scaled(a)[0]), this.scaled(a)[1]);
+        {
+          const [factor, rest] = this.scaled(a);
+          if (factor !== undefined) return this.mul(this.constant(-factor), rest);
+        }
         return undefined;
       default:
         return undefined;
