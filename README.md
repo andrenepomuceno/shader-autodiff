@@ -4,6 +4,22 @@ Turn a math expression typed at runtime into GLSL/WGSL that computes its value *
 derivatives** in one pass, plus a matching JavaScript evaluator for the CPU. No CAS, no build step,
 no dependencies, about 15 kB.
 
+## Install
+
+```bash
+npm install shader-autodiff
+```
+
+Or straight from a CDN, no build step (plain ES modules):
+
+```js
+import { compile } from 'https://cdn.jsdelivr.net/npm/shader-autodiff@0.1.0/src/index.js';
+```
+
+TypeScript declarations ship in `types/index.d.ts`.
+
+## Usage
+
 ```js
 import { compile } from 'shader-autodiff';
 
@@ -80,3 +96,7 @@ sympy values on the CPU (to 1e-10) and on the GPU (WebGL2 and WebGPU, within flo
   differences vs glsl-autodiff structs vs sympy-generated code, on desktop and mobile GPUs.
 - Playground page: type a formula, see the code, plot value and gradient.
 - More optimisation: common-factor extraction across sums.
+
+## License
+
+[MIT](LICENSE)

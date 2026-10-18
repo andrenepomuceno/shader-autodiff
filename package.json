@@ -2,11 +2,29 @@
   "name": "shader-autodiff",
   "version": "0.0.0",
   "description": "Compile user-typed math expressions to GLSL/WGSL/JS that compute exact derivatives in one pass",
+  "keywords": ["glsl", "wgsl", "webgl", "webgpu", "shader", "autodiff", "automatic-differentiation", "gradient", "hessian", "jacobian", "sdf", "threejs", "math", "parser"],
+  "license": "MIT",
+  "author": "André Nepomuceno",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrenepomuceno/shader-autodiff.git"
+  },
+  "homepage": "https://github.com/andrenepomuceno/shader-autodiff#readme",
+  "bugs": "https://github.com/andrenepomuceno/shader-autodiff/issues",
   "type": "module",
-  "exports": "./src/index.js",
-  "files": ["src"],
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./types/index.d.ts",
+  "sideEffects": false,
+  "files": ["src", "types/index.d.ts"],
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "release": "node scripts/release.mjs"
   },
   "engines": {
     "node": ">=20"
