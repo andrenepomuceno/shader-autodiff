@@ -152,7 +152,8 @@ def main():
 
     document = {"generator": "tools/metric-shaders/reference.py", "sympy": sympy.__version__, "presets": entries}
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(dump(document), encoding="utf-8")
+    args.out.write_text(dump(document), encoding="utf-8", newline="
+")
 
 
 if __name__ == "__main__":

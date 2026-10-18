@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GPU agreement</title>
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; background: #fff; color: #111; }
+    pre { white-space: pre-wrap; }
+    .fail { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h1>GPU agreement</h1>
+  <p>Compiles in the browser, evaluates on the GPU (WebGL2 and, when available, WebGPU), reads back and
+  compares with the float64 JS evaluator and the sympy reference.</p>
+  <pre id="log">running…</pre>
+  <script type="module" src="./harness.js"></script>
+</body>
+</html>
