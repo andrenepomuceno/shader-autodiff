@@ -6,6 +6,7 @@ import { checkIdentifier } from './names.js';
 import { Differentiator } from './differentiate.js';
 import { evaluateGraph } from './evaluate.js';
 import { emitFunction, shapeValues } from './targets.js';
+import { buildTsl, packTsl } from './tsl.js';
 
 function checkNames({ variables, parameters, derived }) {
   const seen = new Set();
@@ -184,6 +185,28 @@ export function createProgram({ variables = [], parameters = [], derived = {}, l
       const values = evaluateGraph(graph, outputs.flatMap((output) => output.components.map(handle)), env);
       const result = {};
       for (const output of outputs) result[output.name] = shapeValues(output, values.splice(0, output.components.length));
+      return result;
+    },
+    /**
+     * three.js TSL nodes for the outputs of a function spec, shaped like `evaluateFunction`
+     * (`float` → node, `vecN`/`matN` → TSL vector/matrix node, other types → arrays of nodes).
+     * `inputs` is a vector node for 2–4 variables, or an array or object of scalar nodes;
+     * `parameters` maps parameter names to TSL nodes (uniforms).
+     */
+    tsl(spec, TSL, { inputs, parameters: parameterNodes } = {}) {
+      const outputs = [...(spec.returns ? [{ ...spec.returns, name: 'value' }] : []), ...(spec.outputs ?? [])];
+      const nodes = buildTsl(graph, outputs.flatMap((output) => output.components.map(handle)), TSL, {
+        variables: context.variables,
+        inputs,
+        parameters: parameterNodes,
+      });
+      const result = {};
+      for (const output of outputs) {
+        const components = nodes.splice(0, output.components.length);
+        result[output.name] = output.shape?.length === 2 && !/^mat[234]$/.test(output.type)
+          ? shapeValues(output, components)
+          : packTsl(TSL, output.type, components);
+      }
       return result;
     },
     glsl: (spec) => emitFunction('glsl', context, spec),

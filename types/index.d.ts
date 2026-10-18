@@ -62,6 +62,16 @@ export interface VectorResult {
   jacobian?: number[][];
 }
 
+/** The `three/tsl` namespace (`import * as TSL from 'three/tsl'`); typed loosely to avoid a dependency on three. */
+export type TSLNamespace = Record<string, any>;
+
+export interface TSLOptions {
+  /** A vector node for 2–4 variables (e.g. positionLocal), or an array or object of scalar nodes. */
+  inputs?: unknown;
+  /** TSL nodes (uniforms) for the parameters, by name. */
+  parameters?: Readonly<Record<string, unknown>>;
+}
+
 export interface Compiled<Result> {
   readonly order: 0 | 1 | 2;
   readonly variables: string[];
@@ -72,6 +82,8 @@ export interface Compiled<Result> {
   wgsl(name: string, options?: ShaderOptions): string;
   /** Source of `function name({ ...variables, ...parameters })` returning what `evaluate` returns. */
   js(name: string): string;
+  /** three.js TSL nodes for the same outputs (vecN/matN nodes, arrays where TSL has no type). */
+  tsl(TSL: TSLNamespace, options?: TSLOptions): Record<string, any>;
   evaluate(env: Env): Result;
 }
 
@@ -116,6 +128,7 @@ export interface Program {
   glsl(spec: FunctionSpec): string;
   wgsl(spec: FunctionSpec): string;
   js(spec: FunctionSpec): string;
+  tsl(spec: FunctionSpec, TSL: TSLNamespace, options?: TSLOptions): Record<string, any>;
 }
 
 export function createProgram(options?: SymbolOptions): Program;

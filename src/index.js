@@ -65,6 +65,7 @@ export function compile(source, { variables = [], parameters = [], derived = {},
     glsl: (name, options) => program.glsl(emitSpec(name, options)),
     wgsl: (name, options) => program.wgsl(emitSpec(name, options)),
     js: (name) => program.js(emitSpec(name)),
+    tsl: (TSL, options) => program.tsl(spec, TSL, options),
     evaluate: (env) => program.evaluateFunction(spec, env),
   };
 }

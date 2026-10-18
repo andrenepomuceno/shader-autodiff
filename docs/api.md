@@ -60,6 +60,31 @@ GLSL output only uses GLSL ES 3.00 built-ins, and every target evaluates exactly
 the same parenthesisation (`min`/`max` tie branches use `a < b ? … : …` in GLSL and JS and
 `select` in WGSL).
 
+### three.js TSL
+
+`tsl(TSL, { inputs, parameters })` builds the same outputs as three.js
+[TSL](https://threejs.org/docs/#manual/en/introduction/Three-Shading-Language) nodes, for node
+materials and `WebGPURenderer` (WebGPU, or its WebGL2 fallback). The caller passes the TSL namespace,
+so this library does not depend on three:
+
+```js
+import * as TSL from 'three/tsl';
+
+const sdf = compile('length3 - 1 + 0.1 * sin(5 * x + t)', {
+  variables: ['x', 'y', 'z'], parameters: ['t'], derived: { length3: 'sqrt(x*x + y*y + z*z)' },
+});
+const { value, gradient } = sdf.tsl(TSL, { inputs: TSL.positionLocal, parameters: { t: TSL.time } });
+material.normalNode = TSL.transformNormalToView(TSL.normalize(gradient));
+```
+
+- `inputs`: a vector node for 2–4 variables (`inputs.x`, `inputs.y`, … in variable order), an array
+  of scalar nodes, or an object of scalar nodes by variable name.
+- `parameters`: TSL nodes (uniforms) for every parameter the expressions use.
+- Results: `value` and the derivatives as `float`, `vecN` or `matN` nodes; Jacobians and outputs with
+  no TSL type (non-square matrices, more than 4 variables) come back as arrays (of rows) of nodes.
+- Every graph node becomes one TSL node object, so TSL shares common subexpressions. TSL has no
+  hyperbolic functions, so `sinh`, `cosh` and `tanh` are built from `exp` there.
+
 ## `createProgram(options)`
 
 The low-level API behind `compile`, for clients that need structured outputs (a metric tensor and its
@@ -74,6 +99,7 @@ program share one graph, so common subexpressions are shared across everything e
 | `isZero(handle)` | Whether the handle is the constant 0 |
 | `evaluate(handles, env)` | Array of numbers |
 | `glsl(spec)`, `wgsl(spec)`, `js(spec)` | Source of one function |
+| `tsl(spec, TSL, { inputs, parameters })` | TSL nodes for the spec outputs (see above) |
 | `evaluateFunction(spec, env)` | What the emitted JS function returns |
 
 A function spec is
