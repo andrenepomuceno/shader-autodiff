@@ -42,6 +42,14 @@ low-level API for structured outputs (several functions sharing one graph, neste
 `mat3` returns). See [docs/api.md](docs/api.md) for the API and the emitted-code contract, and
 [docs/validation.md](docs/validation.md) for how it is tested.
 
+## Examples
+
+- [examples/three](examples/three/): a three.js raymarcher for SDFs you type, with normals from the
+  exact gradient and steps scaled by it (so even non-distance fields march safely). Serve the repo
+  root (`node tools/gpu/serve.mjs`) and open `/examples/three/`.
+- [examples/metric-shaders](examples/metric-shaders/metric.js): metric tensors and their partials
+  for geodesic ray tracing, including pullback metrics from nested derivatives.
+
 ## Why
 
 - **Exact, cheap derivatives on the GPU.** SDF normals, metric partials (Christoffel symbols),
