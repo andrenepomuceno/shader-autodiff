@@ -21,6 +21,8 @@ but nothing in `src/` may depend on them.
 
 - Clean, self-documenting code; comments only for non-obvious formulas or workarounds.
 - Documentation lives in `docs/`; update it when the public API or emitted code contract changes.
+- `README.md` has translations (`README.pt-BR.md`, `README.ja.md`, `README.zh-CN.md`, `README.ru.md`);
+  update them in the same commit as any README change, keeping code blocks and links identical.
 - Every feature gets `node --test` coverage; emitted code gets golden tests.
 - Emitted GLSL uses float literals with a dot and GLSL ES 3.00 built-ins unless the target says
   otherwise.
