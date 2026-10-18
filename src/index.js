@@ -1,20 +1,10 @@
-import { createProgram, checkIdentifier } from './program.js';
+import { checkIdentifier } from './names.js';
+import { createProgram } from './program.js';
+import { matrixType, vectorType } from './targets.js';
 
 export { ExpressionError } from './errors.js';
 export { parse, DEFAULT_LIMITS } from './parser.js';
 export { createProgram };
-
-function vectorType(size) {
-  if (size === 1) return 'float';
-  return size <= 4 ? `vec${size}` : `float[${size}]`;
-}
-
-function matrixType(columns, rows) {
-  if (columns === 1) return vectorType(rows);
-  if (rows === 1) return vectorType(columns);
-  if (columns <= 4 && rows <= 4) return columns === rows ? `mat${columns}` : `mat${columns}x${rows}`;
-  return `float[${columns * rows}]`;
-}
 
 /**
  * Compiles one expression (value, gradient, Hessian) or an object of named expressions (values and
@@ -37,7 +27,7 @@ export function compile(source, { variables = [], parameters = [], derived = {},
   const spec = { returns: null, outputs: [] };
   if (multiple) {
     spec.outputs.push({ name: 'value', type: vectorType(values.length), components: values, shape: [values.length] });
-    if (order >= 1 && count > 0) {
+    if (order >= 1) {
       const columns = variables.map((variable) => values.map((value) => program.derivative(value, variable)));
       spec.outputs.push({
         name: 'jacobian',
@@ -49,14 +39,17 @@ export function compile(source, { variables = [], parameters = [], derived = {},
   } else {
     const [value] = values;
     spec.returns = { type: 'float', components: [value] };
-    if (order >= 1 && count > 0) {
+    if (order >= 1) {
       const gradient = differentiate(value);
       spec.outputs.push({ name: 'gradient', type: vectorType(count), components: gradient, shape: [count] });
       if (order === 2) {
+        // Only the upper triangle is differentiated; mirroring keeps H exactly symmetric.
+        const upper = gradient.map((partial, i) => variables.map((variable, j) => (j >= i ? program.derivative(partial, variable) : null)));
+        const hessian = upper.map((row, i) => row.map((entry, j) => entry ?? upper[j][i]));
         spec.outputs.push({
           name: 'hessian',
           type: matrixType(count, count),
-          components: gradient.flatMap(differentiate),
+          components: hessian.flat(),
           shape: [count, count],
         });
       }

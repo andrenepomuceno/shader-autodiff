@@ -127,6 +127,7 @@ test('Hessians match central differences of the gradient and are symmetric', () 
     for (let trial = 0; trial < 5; trial += 1) {
       const env = { x: 0.3 + 2 * next(), y: 0.3 + 2 * next(), z: 0.3 + 2 * next(), a: next(), b: 0.5 + next() };
       const { hessian, gradient } = second.evaluate(env);
+      VARIABLES.forEach((_, i) => VARIABLES.forEach((__, j) => assert.equal(hessian[i][j], hessian[j][i], `exact symmetry of ${text}`)));
       assert.deepEqual(gradient, compile(text, { variables: VARIABLES, parameters: PARAMETERS }).evaluate(env).gradient);
       VARIABLES.forEach((name, column) => {
         const h = 1e-5 * Math.max(1, Math.abs(env[name]));

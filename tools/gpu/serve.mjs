@@ -10,7 +10,13 @@ const PORT = Number(process.argv[2] ?? 8137);
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json' };
 
 createServer(async (request, response) => {
-  const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+  let path;
+  try {
+    path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+  } catch {
+    response.writeHead(400).end();
+    return;
+  }
   const file = normalize(join(ROOT, path.endsWith('/') ? `${path}index.html` : path));
   if (request.method !== 'GET' || !file.startsWith(ROOT.endsWith(sep) ? ROOT : ROOT + sep)) {
     response.writeHead(403).end();

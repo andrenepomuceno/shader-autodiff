@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { compileMetric } from '../examples/metric-shaders/metric.js';
+import { golden } from './helpers/golden.js';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/metric-shaders.json', import.meta.url), 'utf8'));
 
@@ -27,6 +28,15 @@ for (const preset of fixture.presets) {
         assert.ok(matrixError(partial, sample.partials[k]) < 1e-10, `d/d${'xyz'[k]} ${where}: ${matrixError(partial, sample.partials[k])}`);
       });
     }
+  });
+}
+
+for (const id of ['schwarzschild-lens', 'twist', 'rotating-hallway']) {
+  test(`golden metric-shaders ${id}`, () => {
+    const { kind, components } = fixture.presets.find((preset) => preset.id === id);
+    const { glsl, wgsl } = compileMetric({ kind, components });
+    golden(`metric-${id}.glsl`, glsl);
+    golden(`metric-${id}.wgsl`, wgsl);
   });
 }
 

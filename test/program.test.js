@@ -61,6 +61,17 @@ test('non-square matrices are column-major in shaders and row-indexed in JS', ()
   assert.deepEqual(program.evaluateFunction(spec, { x: 1, y: 0 }).value, [[1, 4], [2, 5], [3, 6]]);
 });
 
+test('the program keeps its own copy of the variable and parameter lists', () => {
+  const variables = ['x'];
+  const program = createProgram({ variables, parameters: ['a'] });
+  const f = program.expression('a * x');
+  variables.push('a');
+  assert.throws(() => program.derivative(f, 'a'), /'a' is not a variable/);
+  assert.deepEqual(program.variables, ['x']);
+  assert.ok(Object.isFrozen(program.variables));
+  assert.match(program.glsl({ name: 'f', returns: { type: 'float', components: [f] } }), /^float f\(float x\)/);
+});
+
 test('spec validation', () => {
   const program = createProgram(options);
   const x = program.expression('x');
@@ -69,6 +80,7 @@ test('spec validation', () => {
   assert.throws(() => program.glsl({ name: 'f', returns: { type: 'float[1]', components: [x] } }), /cannot return an array/);
   assert.throws(() => program.glsl({ name: 'f', outputs: [{ name: 'value', type: 'float', components: [x] }], returns: { type: 'float', components: [x] } }), /'value' collides/);
   assert.throws(() => program.glsl({ name: 'f', outputs: [{ name: 'o', type: 'float', components: [x] }, { name: 'o', type: 'float', components: [x] }] }), /'o' collides/);
+  assert.throws(() => program.glsl({ name: 'f', outputs: [{ name: 'exp', type: 'float', components: [x] }] }), /output 'exp' shadows a built-in/);
   assert.equal(program.glsl({ name: 'f', outputs: [{ name: 'o', type: 'float[2]', components: [x, x] }] }),
     'void f(vec3 p, out float o[2]) {\n    o[0] = p.x;\n    o[1] = p.x;\n}\n');
 });

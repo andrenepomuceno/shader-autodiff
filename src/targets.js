@@ -1,8 +1,8 @@
 import { lower } from './emit.js';
-import { isReserved } from './reserved.js';
+import { checkIdentifier } from './names.js';
 
 const COMPONENTS = ['x', 'y', 'z', 'w'];
-const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const FLOAT32_MAX = 3.4028234663852886e38;
 
 export function glslFloat(value) {
   const text = String(value);
@@ -11,7 +11,26 @@ export function glslFloat(value) {
   return text;
 }
 
-/** float, vecN, matN, matCxR (C columns, R rows) or float[N]. */
+/** A literal for a 32-bit float shader; constants that do not fit are an error, not an infinity. */
+function shaderFloat(value) {
+  if (Math.abs(value) > FLOAT32_MAX) throw new RangeError(`constant ${value} does not fit in a 32-bit float`);
+  return glslFloat(value);
+}
+
+export function vectorType(size) {
+  if (size === 1) return 'float';
+  return size >= 2 && size <= 4 ? `vec${size}` : `float[${size}]`;
+}
+
+export function matrixType(columns, rows) {
+  if (columns === 0 || rows === 0) return 'float[0]';
+  if (columns === 1) return vectorType(rows);
+  if (rows === 1) return vectorType(columns);
+  if (columns <= 4 && rows <= 4) return columns === rows ? `mat${columns}` : `mat${columns}x${rows}`;
+  return `float[${columns * rows}]`;
+}
+
+/** float, vecN, matN, matCxR (C columns, R rows) or float[N]; float[0] only exists in JS. */
 export function parseType(type) {
   let match;
   if (type === 'float') return { kind: 'float', size: 1 };
@@ -21,7 +40,7 @@ export function parseType(type) {
     const rows = Number(match[2] ?? match[1]);
     return { kind: 'mat', columns, rows, size: columns * rows };
   }
-  if ((match = /^float\[([1-9]\d*)\]$/.exec(type))) return { kind: 'array', size: Number(match[1]) };
+  if ((match = /^float\[(0|[1-9]\d*)\]$/.exec(type))) return { kind: 'array', size: Number(match[1]) };
   throw new TypeError(`unsupported type '${type}'`);
 }
 
@@ -58,7 +77,7 @@ function variableInputs(variables) {
 
 const LANGUAGES = {
   glsl: {
-    literal: glslFloat,
+    literal: shaderFloat,
     call: (op, args) => `${op === 'atan2' ? 'atan' : op}(${args.join(', ')})`,
     select: (a, b, c, d) => `(${a} < ${b} ? ${c} : ${d})`,
     type(type) {
@@ -75,7 +94,7 @@ const LANGUAGES = {
     signature: (name, inputs, returnType) => `${returnType ?? 'void'} ${name}(${inputs.join(', ')}) {`,
   },
   wgsl: {
-    literal: glslFloat,
+    literal: shaderFloat,
     call: (op, args) => `${op}(${args.join(', ')})`,
     select: (a, b, c, d) => `select(${d}, ${c}, ${a} < ${b})`,
     type(type) {
@@ -98,16 +117,19 @@ function serialize(value) {
   return Array.isArray(value) ? `[${value.map(serialize).join(', ')}]` : value;
 }
 
-function checkSpec(context, spec, inputs, parameterNames) {
+/**
+ * Names must be valid everywhere. In shaders the function, its arguments, its outputs and the
+ * parameters emitted by name share one scope; in JS outputs are object keys next to `value`.
+ */
+function checkSpec(spec, scope) {
   const { name, returns, outputs = [] } = spec;
-  for (const parameter of parameterNames) {
-    if (inputs.names.includes(parameter)) throw new TypeError(`parameter '${parameter}' collides with the argument '${parameter}'; rename it`);
+  checkIdentifier(name, 'function');
+  outputs.forEach((output) => checkIdentifier(output.name, 'output'));
+  for (const parameter of scope.parameters) {
+    if (scope.arguments.includes(parameter)) throw new TypeError(`parameter '${parameter}' collides with the argument '${parameter}'; rename it`);
   }
-  const taken = new Set([...inputs.names, ...parameterNames, ...(returns ? ['value'] : [])]);
-  for (const [label, identifier] of [['function', name], ...outputs.map((output) => ['output', output.name])]) {
-    if (typeof identifier !== 'string' || !IDENTIFIER.test(identifier) || isReserved(identifier)) {
-      throw new TypeError(`invalid ${label} name '${identifier}'`);
-    }
+  const taken = new Set([...scope.arguments, ...scope.parameters, ...(returns ? ['value'] : [])]);
+  for (const [label, identifier] of [...(scope.js ? [] : [['function', name]]), ...outputs.map((output) => ['output', output.name])]) {
     if (taken.has(identifier)) throw new TypeError(`${label} name '${identifier}' collides with another name in the emitted code`);
     taken.add(identifier);
   }
@@ -129,8 +151,9 @@ export function emitFunction(language, context, spec) {
   const { graph, variables, parameters } = context;
   const { name, returns, outputs = [], parameters: renames = {} } = spec;
   const inputs = variableInputs(variables);
-  const freeParameters = language === 'js' ? parameters : parameters.filter((parameter) => !Object.hasOwn(renames, parameter));
-  checkSpec(context, spec, language === 'js' ? { names: variables } : inputs, freeParameters);
+  checkSpec(spec, language === 'js'
+    ? { js: true, arguments: [], parameters: [] }
+    : { arguments: inputs.names, parameters: parameters.filter((parameter) => !Object.hasOwn(renames, parameter)) });
 
   const all = [...(returns ? [returns] : []), ...outputs];
   const roots = all.flatMap((output) => output.components);
@@ -165,6 +188,7 @@ export function emitFunction(language, context, spec) {
     const type = parseType(output.type);
     const typeText = syntax.type(type);
     const values = take(output);
+    if (type.size === 0) continue;
     signature.push(syntax.output(output.name, type, typeText));
     if (type.kind === 'array') values.forEach((value, index) => lines.push(syntax.assignElement(output.name, index, value)));
     else lines.push(syntax.assign(output.name, type.kind === 'float' ? values[0] : syntax.construct(typeText, values)));

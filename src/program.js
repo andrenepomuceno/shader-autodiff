@@ -2,18 +2,10 @@ import { ExpressionError } from './errors.js';
 import { Graph } from './graph.js';
 import { CONSTANTS, FUNCTIONS } from './operations.js';
 import { DEFAULT_LIMITS, parse } from './parser.js';
-import { isReserved } from './reserved.js';
+import { checkIdentifier } from './names.js';
 import { Differentiator } from './differentiate.js';
 import { evaluateGraph } from './evaluate.js';
 import { emitFunction, shapeValues } from './targets.js';
-
-const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
-
-export function checkIdentifier(name, what = 'symbol') {
-  if (typeof name !== 'string' || !IDENTIFIER.test(name)) throw new TypeError(`invalid ${what} name '${name}'`);
-  if (Object.hasOwn(FUNCTIONS, name) || Object.hasOwn(CONSTANTS, name)) throw new TypeError(`${what} '${name}' shadows a built-in`);
-  if (isReserved(name)) throw new TypeError(`${what} '${name}' is reserved in the emitted code`);
-}
 
 function checkNames({ variables, parameters, derived }) {
   const seen = new Set();
@@ -127,7 +119,7 @@ export function createProgram({ variables = [], parameters = [], derived = {}, l
   }
 
   function variableNode(name) {
-    const index = variables.indexOf(name);
+    const index = context.variables.indexOf(name);
     if (index < 0) throw new TypeError(`'${name}' is not a variable`);
     return symbols.get(name);
   }
@@ -143,7 +135,7 @@ export function createProgram({ variables = [], parameters = [], derived = {}, l
     };
   }
 
-  const context = { graph, variables: [...variables], parameters: [...parameters] };
+  const context = { graph, variables: Object.freeze([...variables]), parameters: Object.freeze([...parameters]) };
 
   return {
     variables: context.variables,

@@ -24,6 +24,9 @@ Returns `{ order, variables, parameters, outputs, glsl(name, options), wgsl(name
   - Single expression: `{ value, gradient: [n], hessian: [[n×n]] }` (as far as `order` asks).
   - Named expressions: `{ value: [m], jacobian: [[m×n]] }`, rows in the order of the object keys,
     `jacobian[i][j] = ∂F_i/∂x_j`.
+  - The Hessian is computed once per pair `i ≤ j` and mirrored, so it is exactly symmetric.
+  - With no variables, `gradient`, `hessian` and the Jacobian rows are empty arrays, and the shader
+    functions have no derivative outputs.
 - `js(name)` returns the source of `function name({ x, y, …, a, … })` returning exactly what
   `evaluate` returns.
 - `glsl(name, { parameters })` and `wgsl(name, { parameters })` return one shader function;
@@ -51,7 +54,8 @@ float f(vec3 p, out vec3 gradient) { … }
 fn f(p: vec3<f32>, gradient: ptr<function, vec3<f32>>) -> f32 { … }
 ```
 
-Temporaries are named `t0, t1, …` in a deterministic order, float literals always contain a dot,
+Temporaries are named `t0, t1, …` in a deterministic order, float literals always contain a dot
+(a folded constant outside the float32 range makes `glsl`/`wgsl` throw a `RangeError`),
 GLSL output only uses GLSL ES 3.00 built-ins, and every target evaluates exactly the same DAG with
 the same parenthesisation (`min`/`max` tie branches use `a < b ? … : …` in GLSL and JS and
 `select` in WGSL).
@@ -91,9 +95,11 @@ output overrides that. In JS the return value is the `value` field of the return
 ## Names
 
 Symbol names must be identifiers, distinct, not a built-in function or constant, and not reserved in
-any emitted language (GLSL, WGSL and JavaScript keywords, `Math`, `t0`, `t1`, …, names starting with
-`gl_` or containing `__`). Function and output names follow the same rule and must not collide with
-an argument, an output, or a parameter that is emitted by name. Violations throw `TypeError`.
+any emitted language: GLSL, WGSL and JavaScript keywords and reserved words, GLSL built-in function
+names, `select`, `Math`, `_`, `t0`, `t1`, …, names starting with `gl_` or containing `__`. Function
+and output names follow the same rule; in shaders they must also not collide with an argument,
+another output, or a parameter that is emitted by name (JS outputs are object keys, so they cannot
+collide). Violations throw `TypeError`.
 
 ## Grammar
 

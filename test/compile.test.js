@@ -81,7 +81,40 @@ test('emitted names may not collide', () => {
   assert.throws(() => packed.glsl('f'), /collides/);
   assert.doesNotThrow(() => packed.js('f'));
   assert.throws(() => compile('x', { variables: ['x'] }).glsl('x'), /function name 'x' collides/);
-  assert.throws(() => compile('x', { variables: ['x'] }).glsl('fn'), /invalid function name/);
+  assert.throws(() => compile('x', { variables: ['x'] }).glsl('fn'), /function 'fn' is reserved/);
+  assert.throws(() => compile('x', { variables: ['x'] }).glsl('1f'), /invalid function name/);
+});
+
+test('JS output names are object keys and never collide with symbols', () => {
+  const compiled = compile('x * gradient + value', { variables: ['x', 'y'], parameters: ['gradient', 'value'] });
+  const emitted = new Function(`return ${compiled.js('f')}`)();
+  assert.deepEqual(emitted({ x: 2, y: 0, gradient: 3, value: 1 }), { value: 7, gradient: [3, 0] });
+});
+
+test('names reserved in any target or shadowing a shader built-in are rejected', () => {
+  for (const name of ['target', 'set', 'from', 'ref', 'match', '_', 'mix', 'length', 'dot', 'fract']) {
+    assert.throws(() => compile('1', { variables: [name] }), /reserved/, name);
+  }
+  assert.throws(() => compile('x + 1', { variables: ['x'] }).glsl('sqrt'), /function 'sqrt' shadows a built-in/);
+  assert.throws(() => compile('x + 1', { variables: ['x'] }).wgsl('length'), /function 'length' is reserved/);
+});
+
+test('constants outside the float32 range are rejected in shaders but fine in JS', () => {
+  const compiled = compile('x * 1e39 + exp(100)', { variables: ['x'] });
+  assert.throws(() => compiled.glsl('f'), /does not fit in a 32-bit float/);
+  assert.throws(() => compiled.wgsl('f'), /does not fit in a 32-bit float/);
+  assert.equal(compiled.evaluate({ x: 0 }).value, Math.exp(100));
+  assert.doesNotThrow(() => compiled.js('f'));
+});
+
+test('without variables the derivative outputs are empty', () => {
+  const single = compile('2 * a', { parameters: ['a'], order: 2 });
+  assert.deepEqual(single.evaluate({ a: 3 }), { value: 6, gradient: [], hessian: [] });
+  assert.equal(single.glsl('f'), 'float f() {\n    return 2.0 * a;\n}\n');
+  assert.deepEqual(new Function(`return ${single.js('f')}`)()({ a: 3 }), { value: 6, gradient: [], hessian: [] });
+  const multiple = compile({ U: 'a', V: '1' }, { parameters: ['a'] });
+  assert.deepEqual(multiple.evaluate({ a: 3 }), { value: [3, 1], jacobian: [[], []] });
+  assert.equal(multiple.glsl('f'), 'void f(out vec2 value) {\n    value = vec2(a, 1.0);\n}\n');
 });
 
 test('evaluate requires every symbol it reads', () => {
