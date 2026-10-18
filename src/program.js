@@ -180,8 +180,14 @@ export function createProgram({ variables = [], parameters = [], derived = {}, l
     div: arithmetic('div'),
     neg: arithmetic('neg'),
     /** ∂expression/∂variable, itself an expression that can be differentiated again. */
-    derivative: (expression, variable) =>
-      differentiator.tangent(handle(expression), variableNode(variable)) ?? graph.constant(0),
+    derivative(expression, variable) {
+      try {
+        return differentiator.tangent(handle(expression), variableNode(variable)) ?? graph.constant(0);
+      } catch (error) {
+        if (error instanceof RangeError) throw new ExpressionError(`${error.message} in the derivative with respect to ${variable}`);
+        throw error;
+      }
+    },
     isZero: (expression) => graph.isConstant(handle(expression), 0),
     evaluate: (expressions, env) => evaluateGraph(graph, expressions.map(handle), env),
     /** Evaluates the outputs of a function spec, shaped as the emitted JS would return them. */

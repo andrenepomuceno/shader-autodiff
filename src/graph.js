@@ -1,8 +1,7 @@
-import { Algebra } from './algebra.js';
+import { Algebra, ARITHMETIC } from './algebra.js';
 import { OPERATIONS } from './operations.js';
 
 const COMMUTATIVE = new Set(['min', 'max']);
-const ARITHMETIC = new Set(['add', 'sub', 'mul', 'div', 'neg']);
 
 /**
  * An SSA DAG. Nodes are hash-consed, so structurally equal subexpressions share one id, and ids
@@ -30,6 +29,11 @@ export class Graph {
 
   node(id) {
     return this.nodes[id];
+  }
+
+  /** The id of op(args) if that node exists, without creating it. */
+  lookup(op, args) {
+    return this.index.get(`${op}::${args.join(',')}`);
   }
 
   constantValue(id) {

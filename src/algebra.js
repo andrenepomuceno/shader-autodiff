@@ -6,29 +6,50 @@
  * k is a non-zero integer, so quotients are negative powers. Equal normal forms rebuild to the same
  * node, which is what makes x·y − y·x, x/x and sin²u + cos²u cancel. Products of sums are not
  * expanded, so the emitted code never grows by distribution.
+ *
+ * Coefficient arithmetic never changes what the emitted float32 code computes beyond rounding: a
+ * merged coefficient must be an ordinary float32, and dividing by a constant only becomes a
+ * multiplication when the reciprocal is exact (a power of two); otherwise the constant stays a base,
+ * so x/49 is still emitted as x / 49.0.
  */
 
 const FLOAT32_MIN_NORMAL = 1.1754943508222875e-38;
 const FLOAT32_MAX = 3.4028234663852886e38;
 
-/** Folding two constants is only safe when the result is still an ordinary float32. */
+export const ARITHMETIC = new Set(['add', 'sub', 'mul', 'div', 'neg']);
+
+/** Folding constants is only safe when the result is still an ordinary float32. */
 export function representable(value) {
   return value === 0 || (Math.abs(value) >= FLOAT32_MIN_NORMAL && Math.abs(value) <= FLOAT32_MAX);
 }
 
-const ARITHMETIC = new Set(['add', 'sub', 'mul', 'div', 'neg']);
+function exactReciprocal(value) {
+  return Number.isInteger(Math.log2(Math.abs(value))) && representable(1 / value);
+}
 
 // A term is { coef, factors } with factors a Map base → power; a polynomial is an array of terms.
 const term = (coef, factors = new Map()) => ({ coef, factors });
+const sorted = (factors) => [...factors].sort((a, b) => a[0] - b[0]);
 const keys = new WeakMap();
 // Factor maps are never mutated after they are built, so their key is computed once.
 function termKey(factors) {
   let key = keys.get(factors);
   if (key === undefined) {
-    key = [...factors].sort((a, b) => a[0] - b[0]).map(([base, power]) => `${base}^${power}`).join('*');
+    key = sorted(factors).map(([base, power]) => `${base}^${power}`).join('*');
     keys.set(factors, key);
   }
   return key;
+}
+
+/** Numeric order of factor maps: by base id, then power, shorter first; the constant term first. */
+function compareFactors(left, right) {
+  const a = sorted(left);
+  const b = sorted(right);
+  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
+    if (a[index][0] !== b[index][0]) return a[index][0] - b[index][0];
+    if (a[index][1] !== b[index][1]) return a[index][1] - b[index][1];
+  }
+  return a.length - b.length;
 }
 
 function multiplyFactors(left, right, sign = 1) {
@@ -41,18 +62,19 @@ function multiplyFactors(left, right, sign = 1) {
   return factors;
 }
 
+/** The polynomial times a constant, or undefined when a coefficient would leave float32. */
 function scale(poly, factor) {
-  return poly.map(({ coef, factors }) => term(coef * factor, factors));
+  const scaled = poly.map(({ coef, factors }) => term(coef * factor, factors));
+  return scaled.every((t) => representable(t.coef)) ? scaled : undefined;
 }
+
+const negate = (poly) => poly.map(({ coef, factors }) => term(-coef, factors));
 
 export class Algebra {
   constructor(graph) {
     this.graph = graph;
     this.normals = new Map();
-  }
-
-  isArithmetic(id) {
-    return ARITHMETIC.has(this.graph.node(id).op);
+    this.factors = new Map();
   }
 
   /** The normal form of a node, read from its structure. */
@@ -61,7 +83,7 @@ export class Algebra {
     const node = this.graph.node(id);
     let poly;
     if (node.op === 'const') poly = node.value === 0 ? [] : [term(node.value)];
-    else if (this.isArithmetic(id)) poly = this.combine(node.op, node.args);
+    else if (ARITHMETIC.has(node.op)) poly = this.combine(node.op, node.args);
     else poly = [term(1, new Map([[id, 1]]))];
     this.normals.set(id, poly);
     return poly;
@@ -69,72 +91,73 @@ export class Algebra {
 
   /** The normal form of `op(args)` for an arithmetic operation, without creating the node. */
   combine(op, [a, b]) {
-    let poly;
     switch (op) {
-      case 'add':
-        poly = this.sum(this.normal(a), this.normal(b));
-        break;
-      case 'sub':
-        poly = this.sum(this.normal(a), scale(this.normal(b), -1));
-        break;
-      case 'neg':
-        poly = scale(this.normal(a), -1);
-        break;
-      case 'mul':
-        poly = this.product(a, b, 1);
-        break;
-      case 'div':
-        poly = this.product(a, b, -1);
-        break;
-      default:
-        throw new Error(`'${op}' is not arithmetic`);
+      case 'add': return this.sum(this.normal(a), this.normal(b));
+      case 'sub': return this.sum(this.normal(a), negate(this.normal(b)));
+      case 'neg': return negate(this.normal(a));
+      case 'mul': return this.product(a, b, 1);
+      case 'div': return this.product(a, b, -1);
+      default: throw new Error(`'${op}' is not arithmetic`);
     }
-    return poly;
+  }
+
+  /** A node used as a factor, as one term (a sum becomes ±content · primitive sum). */
+  factor(id) {
+    if (!this.factors.has(id)) this.factors.set(id, this.factorize(this.normal(id)));
+    return this.factors.get(id);
   }
 
   /**
-   * A single term for a node used as a factor. A sum is split into its content (common coefficient
-   * and factors) times a primitive sum with a fixed sign, so a·(u − v) and b·(v − u) share one base.
+   * ±content · primitive as one term (a single-term polynomial is its own term). The primitive part
+   * has a fixed sign, its first non-constant term in numeric order being positive, so u − v and
+   * v − u share one node. Its lead coefficient is also divided out when that is exact and saves
+   * multiplications, as in 2x + 2πy − 2 = 2·(x + πy − 1), which then shares x + πy − 1.
    */
-  factor(id) {
-    return this.factorize(this.normal(id));
-  }
-
-  /** ±content · primitive sum as one term (a single-term polynomial is its own term). */
   factorize(poly) {
     if (poly.length === 1) return poly[0];
     if (poly.length === 0) return term(0);
-    // The primitive part has a fixed sign (its first non-constant term, in key order, is positive), so
-    // u − v and v − u share one node. Its lead coefficient is also divided out when that saves
-    // multiplications, as in 2x + 2πy − 2 = 2·(x + πy − 1), which then shares x + πy − 1.
-    const { factors: common } = this.commonFactor(poly);
-    const lead = poly.filter((t) => t.factors.size > 0).reduce((best, t) => (termKey(t.factors) < termKey(best.factors) ? t : best));
-    const scaled = (divisor) => poly.map(({ coef, factors }) => term(coef / divisor, multiplyFactors(factors, common, -1)));
+    // Terms kept apart because their merged coefficient would leave float32 must stay whole.
+    const repeated = new Set(poly.map((t) => termKey(t.factors))).size < poly.length;
+    const common = repeated ? new Map() : this.commonFactor(poly);
+    const reduced = poly.map(({ coef, factors }) => term(coef, multiplyFactors(factors, common, -1)));
+    const lead = reduced.filter((t) => t.factors.size > 0).reduce((best, t) => (compareFactors(t.factors, best.factors) < 0 ? t : best));
     const multiplications = (terms) => terms.filter((t) => t.factors.size > 0 && Math.abs(t.coef) !== 1).length;
-    const monic = scaled(lead.coef);
-    const content = multiplications(monic) + 1 < multiplications(poly) ? lead.coef : Math.sign(lead.coef);
-    const primitive = content === lead.coef ? monic : scaled(content);
+    const monic = reduced.map(({ coef, factors }) => term(coef / lead.coef, factors));
+    const exact = monic.every((t, index) => t.coef * lead.coef === reduced[index].coef && representable(t.coef));
+    const useMonic = exact && multiplications(monic) + 1 < multiplications(reduced);
+    const content = useMonic ? lead.coef : Math.sign(lead.coef);
+    const primitive = useMonic ? monic : reduced.map(({ coef, factors }) => term(coef * content, factors));
     const base = this.buildSum(primitive);
     return term(content, multiplyFactors(common, new Map([[base, 1]])));
   }
 
-  /** a · b^sign as a polynomial; a zero factor gives 0, a sum inside a product stays one base. */
+  /** a · b^sign as a polynomial; a sum inside a product stays one base. */
   product(a, b, sign) {
     const left = this.normal(a);
     const right = this.normal(b);
-    if (left.length === 0 || (right.length === 0 && sign === 1)) return [];
-    // A constant distributes over a sum (no new terms), so c·(u + 1) − c can cancel.
+    if (right.length === 0 && sign === -1) throw new RangeError('division by an expression that is identically zero');
+    if (left.length === 0 || right.length === 0) return [];
+    // A constant distributes over a sum (no new terms), so c·(u + 1) − c can cancel; a divisor only
+    // when its reciprocal is exact.
     const constant = (poly) => (poly.length === 1 && poly[0].factors.size === 0 ? poly[0].coef : undefined);
-    if (constant(right) !== undefined && left.length > 1) return scale(left, sign === 1 ? constant(right) : 1 / constant(right));
-    if (constant(left) !== undefined && right.length > 1 && sign === 1) return scale(right, constant(left));
+    const c = constant(right);
+    if (c !== undefined && left.length > 1 && (sign === 1 || exactReciprocal(c))) {
+      const scaled = scale(left, sign === 1 ? c : 1 / c);
+      if (scaled) return scaled;
+    }
+    if (constant(left) !== undefined && right.length > 1 && sign === 1) {
+      const scaled = scale(right, constant(left));
+      if (scaled) return scaled;
+    }
     const x = this.factor(a);
     const y = this.factor(b);
+    const factors = multiplyFactors(x.factors, y.factors, sign);
     const coef = sign === 1 ? x.coef * y.coef : x.coef / y.coef;
-    let factors = multiplyFactors(x.factors, y.factors, sign);
-    if (representable(coef)) return [this.reduceRoots(term(coef, factors))];
-    // Keep the second constant as a base rather than fold out of the float32 range.
-    factors = multiplyFactors(factors, new Map([[this.graph.constant(y.coef), 1]]), sign);
-    return [this.reduceRoots(term(x.coef, factors))];
+    if (representable(coef) && (sign === 1 || exactReciprocal(y.coef))) return [this.reduceRoots(term(coef, factors))];
+    // Keep |y.coef| as a base: no rounding of a reciprocal, no coefficient outside float32.
+    const magnitude = Math.abs(y.coef);
+    const kept = magnitude === 1 ? factors : multiplyFactors(factors, new Map([[this.graph.constant(magnitude), 1]]), sign);
+    return [this.reduceRoots(term(x.coef * Math.sign(y.coef), kept))];
   }
 
   /** sqrt(q)ᵏ with |k| ≥ 2 becomes q^(k/2) · sqrt(q)^(k mod 2). */
@@ -143,11 +166,13 @@ export class Algebra {
       const node = this.graph.node(base);
       if (node.op !== 'sqrt' || Math.abs(power) < 2) continue;
       const whole = Math.trunc(power / 2);
+      const inner = this.factor(node.args[0]);
+      const coef = t.coef * inner.coef ** whole;
+      if (!representable(coef) || (whole < 0 && !exactReciprocal(inner.coef))) continue;
       const factors = new Map(t.factors);
       if (power - 2 * whole === 0) factors.delete(base);
       else factors.set(base, power - 2 * whole);
-      const inner = this.factor(node.args[0]);
-      let result = term(t.coef * inner.coef ** whole, factors);
+      let result = term(coef, factors);
       for (let index = 0; index < Math.abs(whole); index += 1) {
         result = term(result.coef, multiplyFactors(result.factors, inner.factors, Math.sign(whole)));
       }
@@ -159,11 +184,13 @@ export class Algebra {
   /** Sum of two polynomials with like terms combined and sin²u + cos²u rewritten. */
   sum(left, right) {
     const terms = new Map();
+    let separate = 0;
     for (const { coef, factors } of [...left, ...right]) {
       const key = termKey(factors);
       const existing = terms.get(key);
-      if (existing) existing.coef += coef;
-      else terms.set(key, term(coef, factors));
+      if (existing && representable(existing.coef + coef)) existing.coef += coef;
+      // A merged coefficient outside float32 keeps the terms apart, as the source wrote them.
+      else terms.set(existing ? `${key}#${separate++}` : key, term(coef, factors));
     }
     return this.pythagoras([...terms.values()].filter((t) => t.coef !== 0));
   }
@@ -174,7 +201,8 @@ export class Algebra {
       for (const [base, power] of sine.factors) {
         const node = this.graph.node(base);
         if (node.op !== 'sin' || power !== 2) continue;
-        const cosine = this.graph.intern({ op: 'cos', args: node.args });
+        const cosine = this.graph.lookup('cos', node.args);
+        if (cosine === undefined) continue;
         const rest = new Map(sine.factors);
         rest.delete(base);
         const key = termKey(multiplyFactors(rest, new Map([[cosine, 2]])));
@@ -185,50 +213,6 @@ export class Algebra {
       }
     }
     return poly;
-  }
-
-  // ------------------------------------------------------------------------------------------------
-  // Rebuilding canonical nodes from normal forms.
-
-  raw(op, args) {
-    const ordered = op === 'add' || op === 'mul' ? [...args].sort((a, b) => this.rank(a) - this.rank(b)) : args;
-    return this.graph.intern({ op, args: ordered });
-  }
-
-  rank(id) {
-    return this.graph.node(id).op === 'const' ? -1 : id;
-  }
-
-  /** baseⁿ for n ≥ 1 by repeated squaring. */
-  power(base, exponent) {
-    if (exponent === 1) return base;
-    const half = this.power(base, Math.floor(exponent / 2));
-    const square = this.raw('mul', [half, half]);
-    return exponent % 2 === 0 ? square : this.raw('mul', [square, base]);
-  }
-
-  /**
-   * Π baseᵏ over positive k. Later (more derived) bases are multiplied first, so x·F, y·F and z·F
-   * share the product F.
-   */
-  product_(factors) {
-    const ordered = [...factors].sort((a, b) => b[0] - a[0]);
-    let result;
-    for (const [base, exponent] of ordered) {
-      const powered = this.power(base, exponent);
-      result = result === undefined ? powered : this.raw('mul', [result, powered]);
-    }
-    return result;
-  }
-
-  monomial({ coef, factors }) {
-    const numerator = this.product_([...factors].filter(([, power]) => power > 0));
-    const denominator = this.product_([...factors].filter(([, power]) => power < 0).map(([base, power]) => [base, -power]));
-    if (numerator === undefined && denominator === undefined) return this.graph.constant(coef);
-    if (numerator === undefined) return this.raw('div', [this.graph.constant(coef), denominator]);
-    const result = denominator === undefined ? numerator : this.raw('div', [numerator, denominator]);
-    if (coef === 1) return result;
-    return coef === -1 ? this.raw('neg', [result]) : this.raw('mul', [this.graph.constant(coef), result]);
   }
 
   /** Factors common to every term, with the smallest exponent of the same sign. */
@@ -247,9 +231,46 @@ export class Algebra {
       }
       if (shared !== 0) common.set(base, shared);
     }
-    const magnitude = Math.abs(first.coef);
-    const coef = poly.every((t) => Math.abs(t.coef) === magnitude) ? magnitude : 1;
-    return term(coef, common);
+    return common;
+  }
+
+  // ------------------------------------------------------------------------------------------------
+  // Rebuilding canonical nodes from normal forms.
+
+  raw(op, args) {
+    const ordered = op === 'add' || op === 'mul' ? [...args].sort((a, b) => this.graph.rank(a) - this.graph.rank(b)) : args;
+    return this.graph.intern({ op, args: ordered });
+  }
+
+  /** baseⁿ for n ≥ 1 by repeated squaring. */
+  power(base, exponent) {
+    if (exponent === 1) return base;
+    const half = this.power(base, Math.floor(exponent / 2));
+    const square = this.raw('mul', [half, half]);
+    return exponent % 2 === 0 ? square : this.raw('mul', [square, base]);
+  }
+
+  /**
+   * Π baseᵏ over positive k. Later (more derived) bases are multiplied first, so x·F, y·F and z·F
+   * share the product F.
+   */
+  powerProduct(factors) {
+    let result;
+    for (const [base, exponent] of [...factors].sort((a, b) => b[0] - a[0])) {
+      const powered = this.power(base, exponent);
+      result = result === undefined ? powered : this.raw('mul', [result, powered]);
+    }
+    return result;
+  }
+
+  monomial({ coef, factors }) {
+    const numerator = this.powerProduct([...factors].filter(([, power]) => power > 0));
+    const denominator = this.powerProduct([...factors].filter(([, power]) => power < 0).map(([base, power]) => [base, -power]));
+    if (numerator === undefined && denominator === undefined) return this.graph.constant(coef);
+    if (numerator === undefined) return this.raw('div', [this.graph.constant(coef), denominator]);
+    const result = denominator === undefined ? numerator : this.raw('div', [numerator, denominator]);
+    if (coef === 1) return result;
+    return coef === -1 ? this.raw('neg', [result]) : this.raw('mul', [this.graph.constant(coef), result]);
   }
 
   /**
@@ -262,17 +283,17 @@ export class Algebra {
     return id;
   }
 
-  /** Σ terms, positive terms first, the rest subtracted, in a deterministic order. */
+  /**
+   * Σ terms in numeric order (starting from the first positive term, the rest added or subtracted),
+   * so appending a term with a newer base extends the previous chain instead of rebuilding it.
+   */
   buildSum(poly) {
-    const ordered = [...poly].sort((a, b) => (b.coef > 0) - (a.coef > 0) || (termKey(a.factors) < termKey(b.factors) ? -1 : 1));
-    let result;
-    for (const t of ordered) {
-      if (result === undefined) {
-        result = this.monomial(t);
-        continue;
-      }
-      const magnitude = this.monomial(term(Math.abs(t.coef), t.factors));
-      result = this.raw(t.coef < 0 ? 'sub' : 'add', [result, magnitude]);
+    const ordered = [...poly].sort((a, b) => compareFactors(a.factors, b.factors));
+    const head = Math.max(0, ordered.findIndex((t) => t.coef > 0));
+    let result = this.monomial(ordered[head]);
+    for (const [index, t] of ordered.entries()) {
+      if (index === head) continue;
+      result = this.raw(t.coef < 0 ? 'sub' : 'add', [result, this.monomial(term(Math.abs(t.coef), t.factors))]);
     }
     this.normals.set(result, poly);
     return result;
