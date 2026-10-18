@@ -9,7 +9,6 @@ three.js is moving custom shaders to TSL (node materials); `ShaderMaterial` is n
   `TSL.Fn`.
 - Map every operation (select → `TSL.select`/`cond`, atan2 → `TSL.atan`, …); float literals via
   `TSL.float`; share temporaries by reusing node objects (TSL dedupes by identity).
-- Example with `WebGPURenderer` (WebGPU and WebGL2 fallback) and a `MeshStandardNodeMaterial` whose
-  `positionNode`/`normalNode` come from a user-typed height field or warp.
+- Example: moved to task 005.
 - Tests: a fake TSL namespace that records calls (no three dependency in tests), plus a GPU check in
   the harness against three from a CDN.

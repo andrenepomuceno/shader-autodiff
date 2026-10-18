@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>TSL agreement</title>
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; background: #fff; color: #111; }
+    pre { white-space: pre-wrap; }
+    .fail { color: #b00020; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+        "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.tsl.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>TSL agreement</h1>
+  <p>Builds three.js TSL nodes with <code>compiled.tsl()</code>, runs them as compute shaders on
+  <code>WebGPURenderer</code> (WebGPU and the WebGL2 fallback), reads back and compares with the
+  float64 JS evaluator.</p>
+  <pre id="log">running…</pre>
+  <script type="module" src="./tsl.js"></script>
+</body>
+</html>

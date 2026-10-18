@@ -37,6 +37,9 @@ g.js('conformal')                       // source of the same function in JS
 g.evaluate({ x, y, z, a, b, t })        // { value, gradient } computed from the same graph
 ```
 
+For three.js node materials and `WebGPURenderer`, `g.tsl(TSL, { inputs: positionLocal, parameters })`
+returns TSL nodes (`value`, `gradient`, …) built from the same graph.
+
 `compile({ X: '…', Y: '…', Z: '…' }, …)` returns values and the Jacobian, and `createProgram` is the
 low-level API for structured outputs (several functions sharing one graph, nested derivatives,
 `mat3` returns). See [docs/api.md](docs/api.md) for the API and the emitted-code contract, and
@@ -75,7 +78,7 @@ low-level API for structured outputs (several functions sharing one graph, neste
 4. **Rules table.** One entry per operation: value and tangent rule. Subgradients for
    `abs`/`min`/`max`, zero derivative for `sign`/`floor`, integer powers as products, `pow` with a
    variable exponent through `log`.
-5. **Emitters.** GLSL ES 3.00 (WebGL2; also valid desktop GLSL 3.30+), WGSL, JS. Float literals
+5. **Emitters.** GLSL ES 3.00 (WebGL2; also valid desktop GLSL 3.30+), WGSL, JS, three.js TSL nodes. Float literals
    always with a dot, deterministic temporaries (`t0, t1, …`) for stable diffs and shader caching.
 
 ## Prior art and positioning

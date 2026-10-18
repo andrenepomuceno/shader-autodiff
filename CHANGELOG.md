@@ -18,6 +18,9 @@ First public release.
   acos atan atan2 sinh cosh tanh exp log sqrt exp2 log2 abs sign floor fract min max pow mod clamp
   mix step smoothstep`, constants `pi`, `E`.
 - Hash-consing CSE, constant folding, constant hoisting, zero-tangent pruning.
+- three.js TSL backend: `compiled.tsl(TSL, { inputs, parameters })` builds node-material nodes
+  for `WebGPURenderer` without depending on three.
+- three.js example: raymarching user-typed SDFs with exact-gradient normals.
 - TypeScript declarations (`types/index.d.ts`).
-- Validated against sympy (metric-shaders presets and random expressions) and on the GPU (WebGL2 and
-  WebGPU readback).
+- Validated against sympy (metric-shaders presets and random expressions) and on the GPU (WebGL2,
+  WebGPU and three.js TSL readback).
