@@ -76,6 +76,10 @@ export class Graph {
         if (this.isConstant(b, 0)) return a;
         if (a === b) return this.mul(this.constant(2), a);
         if (this.constantValue(a) < 0) return this.sub(b, this.constant(-nodeA.value));
+        for (const [term, other] of [[b, a], [a, b]]) {
+          const [factor, rest] = this.scaled(term);
+          if (factor < 0) return this.sub(other, this.mul(this.constant(-factor), rest));
+        }
         if (nodeB.op === 'neg') return this.sub(a, nodeB.args[0]);
         if (nodeA.op === 'neg') return this.sub(b, nodeA.args[0]);
         return undefined;
@@ -85,6 +89,7 @@ export class Graph {
         if (a === b) return this.constant(0);
         if (nodeB.op === 'neg') return this.add(a, nodeB.args[0]);
         if (this.constantValue(b) < 0) return this.add(a, this.constant(-nodeB.value));
+        if (this.scaled(b)[0] < 0) return this.add(a, this.mul(this.constant(-this.scaled(b)[0]), this.scaled(b)[1]));
         return undefined;
       case 'mul':
         if (this.isConstant(a, 0) || this.isConstant(b, 0)) return this.constant(0);
@@ -95,19 +100,38 @@ export class Graph {
         if (nodeA.op === 'const' && nodeB.op === 'mul' && this.constantValue(nodeB.args[0]) !== undefined) {
           return this.mul(this.constant(nodeA.value * this.constantValue(nodeB.args[0])), nodeB.args[1]);
         }
+        if (nodeA.op !== 'const') {
+          // Constant factors move outwards, where they meet and fold: a·(c·b) = c·(a·b).
+          for (const [term, other] of [[a, b], [b, a]]) {
+            const [factor, rest] = this.scaled(term);
+            if (factor !== undefined) return this.mul(this.constant(factor), this.mul(rest, other));
+          }
+        }
         return this.hoistNegation('mul', nodeA, nodeB);
       case 'div':
         if (this.isConstant(b, 1)) return a;
         if (this.isConstant(b, -1)) return this.neg(a);
         if (this.isConstant(a, 0)) return this.constant(0);
         if (this.constantValue(a) < 0) return this.neg(this.div(this.constant(-nodeA.value), b));
+        if (nodeB.op !== 'const' && this.scaled(a)[0] !== undefined) {
+          const [factor, rest] = this.scaled(a);
+          return this.mul(this.constant(factor), this.div(rest, b));
+        }
         return this.hoistNegation('div', nodeA, nodeB);
       case 'neg':
         if (nodeA.op === 'neg') return nodeA.args[0];
+        if (this.scaled(a)[0] !== undefined) return this.mul(this.constant(-this.scaled(a)[0]), this.scaled(a)[1]);
         return undefined;
       default:
         return undefined;
     }
+  }
+
+  /** [c, x] when the node is the product c·x of a constant and an expression, else []. */
+  scaled(id) {
+    const node = this.nodes[id];
+    if (node.op !== 'mul' || this.nodes[node.args[0]].op !== 'const') return [];
+    return [this.nodes[node.args[0]].value, node.args[1]];
   }
 
   /** (−a)·(−b) = a·b and (−a)·b = −(a·b), likewise for division. */

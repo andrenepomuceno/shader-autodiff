@@ -46,6 +46,6 @@ void metricPartials(vec3 p, out mat3 dgdx, out mat3 dgdy, out mat3 dgdz) {
     float t27 = u_morph * (t3 * t25 - t16 + (t17 + t4 * t26));
     float t28 = u_morph * (t3 * t26 - t20 - (t19 + t4 * t25));
     dgdx = mat3(0.0, 0.0, t12, 0.0, 0.0, t15, t12, t15, u_morph * (2.0 * t17 - 2.0 * t16));
-    dgdy = mat3(0.0, 0.0, t18, 0.0, 0.0, t12, t18, t12, u_morph * (-(2.0 * t19) - 2.0 * t20));
+    dgdy = mat3(0.0, 0.0, t18, 0.0, 0.0, t12, t18, t12, u_morph * (-2.0 * t19 - 2.0 * t20));
     dgdz = mat3(t21, 0.0, t27, 0.0, t21, t28, t27, t28, u_morph * (2.0 * (t8 * t25) + 2.0 * (t9 * t26)));
 }

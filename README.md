@@ -79,4 +79,4 @@ sympy values on the CPU (to 1e-10) and on the GPU (WebGL2 and WebGPU, within flo
 - Benchmarks: per-pixel cost of value + gradient for SDFs and metrics, generated code vs finite
   differences vs glsl-autodiff structs vs sympy-generated code, on desktop and mobile GPUs.
 - Playground page: type a formula, see the code, plot value and gradient.
-- More optimisation: constant reassociation across products, common-factor extraction.
+- More optimisation: common-factor extraction across sums.

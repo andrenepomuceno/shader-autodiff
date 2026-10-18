@@ -46,6 +46,6 @@ fn metricPartials(p: vec3<f32>, dgdx: ptr<function, mat3x3<f32>>, dgdy: ptr<func
     let t27 = u_morph * (t3 * t25 - t16 + (t17 + t4 * t26));
     let t28 = u_morph * (t3 * t26 - t20 - (t19 + t4 * t25));
     *dgdx = mat3x3<f32>(0.0, 0.0, t12, 0.0, 0.0, t15, t12, t15, u_morph * (2.0 * t17 - 2.0 * t16));
-    *dgdy = mat3x3<f32>(0.0, 0.0, t18, 0.0, 0.0, t12, t18, t12, u_morph * (-(2.0 * t19) - 2.0 * t20));
+    *dgdy = mat3x3<f32>(0.0, 0.0, t18, 0.0, 0.0, t12, t18, t12, u_morph * (-2.0 * t19 - 2.0 * t20));
     *dgdz = mat3x3<f32>(t21, 0.0, t27, 0.0, t21, t28, t27, t28, u_morph * (2.0 * (t8 * t25) + 2.0 * (t9 * t26)));
 }

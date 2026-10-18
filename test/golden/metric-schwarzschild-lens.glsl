@@ -13,9 +13,9 @@ void metricPartials(vec3 p, out mat3 dgdx, out mat3 dgdy, out mat3 dgdz) {
     float t3 = 1.0 + t2;
     float t4 = t3 * t3;
     float t5 = 2.0 * t0;
-    float t6 = -(u_morph * (2.0 * (t4 * (2.0 * (t3 * (t2 * (2.0 * (2.0 * (t0 * (2.0 * p.x / t5)) / t1)) / t1))))));
-    float t7 = -(u_morph * (2.0 * (t4 * (2.0 * (t3 * (t2 * (2.0 * (2.0 * (t0 * (2.0 * p.y / t5)) / t1)) / t1))))));
-    float t8 = -(u_morph * (2.0 * (t4 * (2.0 * (t3 * (t2 * (2.0 * (2.0 * (t0 * (2.0 * p.z / t5)) / t1)) / t1))))));
+    float t6 = -32.0 * (u_morph * (t4 * (t3 * (t2 * (t0 * (p.x / t5) / t1) / t1))));
+    float t7 = -32.0 * (u_morph * (t4 * (t3 * (t2 * (t0 * (p.y / t5) / t1) / t1))));
+    float t8 = -32.0 * (u_morph * (t4 * (t3 * (t2 * (t0 * (p.z / t5) / t1) / t1))));
     dgdx = mat3(t6, 0.0, 0.0, 0.0, t6, 0.0, 0.0, 0.0, t6);
     dgdy = mat3(t7, 0.0, 0.0, 0.0, t7, 0.0, 0.0, 0.0, t7);
     dgdz = mat3(t8, 0.0, 0.0, 0.0, t8, 0.0, 0.0, 0.0, t8);
