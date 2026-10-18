@@ -37,12 +37,11 @@ test('custom function specs: matrix return, mixed outputs, renamed parameters', 
   };
   assert.equal(program.glsl(spec), [
     'mat2 metric(vec3 p, out float trace) {',
-    '    float t0 = p.x * u_morph;',
-    '    float t1 = 1.0 + p.x * t0;',
-    '    float t2 = p.y * t0;',
-    '    float t3 = 1.0 + p.y * (p.y * u_morph);',
-    '    trace = t1 + t3;',
-    '    return mat2(t1, t2, t2, t3);',
+    '    float t0 = u_morph * (p.x * p.x);',
+    '    float t1 = p.x * (p.y * u_morph);',
+    '    float t2 = u_morph * (p.y * p.y);',
+    '    trace = t2 + (2.0 + t0);',
+    '    return mat2(1.0 + t0, t1, t1, 1.0 + t2);',
     '}',
     '',
   ].join('\n'));

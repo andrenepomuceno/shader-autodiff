@@ -174,8 +174,14 @@ a non-finite value (`log(0)`, `sqrt(-1)`).
 ## How it works
 
 1. `parse` builds a positioned AST (Pratt parser).
-2. The AST is lowered into a hash-consed SSA graph: equal subexpressions share one node, constants
-   fold, and local identities (`x+0`, `x*1`, `x-x`, `--x`, …) simplify.
+2. The AST is lowered into a hash-consed SSA graph: equal subexpressions share one node and
+   constants fold. Arithmetic (`+ − × ÷`, negation) goes through an algebraic normal form, a sum of
+   terms `c · Π baseᵏ` with integer (also negative) exponents, before the node is built, so like
+   terms combine and cancel (`x·y − y·x`, `x/x`, `(u − v)/(v − u)`), `sqrt(q)²` becomes `q`,
+   `sin²u + cos²u` becomes 1, constants distribute over sums, and every sum is built as
+   `±content · monic primitive` so scalar multiples of a sum share one node. Products of sums are
+   not expanded, so the code never grows by distribution. Like sympy, this assumes the cancelled
+   factors are non-zero (`x/x` is 1 even at 0) and `sqrt(q)²` assumes `q ≥ 0`.
 3. Forward-mode tangents are built as new graph nodes, so derivatives share subexpressions with the
    value and can be differentiated again (Hessians are tangents of tangents). A tangent that is
    identically zero is never built.
