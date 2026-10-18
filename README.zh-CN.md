@@ -77,9 +77,13 @@ g.evaluate({ x, y, z, a, b, t })        // { value, gradient } computed from the
 
 [metric-shaders](examples/metric-shaders/metric.js)：该适配器取代了 sympy 度规编译器（`metricTensor` + `metricPartials`），使应用可以完全静态运行。每个度规预设在 CPU 上（精确到 1e-10）和 GPU 上（WebGL2 与 WebGPU，在 float32 精度范围内）都与 sympy 的结果一致。
 
+## 基准测试
+
+[docs/benchmarks.md](docs/benchmarks.md)：在 GPU（WebGL2 和 WebGPU）上，精确导数相对于有限差分和 sympy 生成代码的逐像素开销与 float32 精度；以及 CPU 上的编译时间、JS 吞吐量和生成代码的大小。
+
 ## 路线图
 
-- 基准测试：对 SDF 和度规，比较“值 + 梯度”的逐像素开销——生成代码 vs 有限差分 vs glsl-autodiff 结构体 vs sympy 生成的代码，覆盖桌面和移动 GPU。
+- 在更多 GPU（移动端、集成显卡）上做基准测试，并与 glsl-autodiff 的对偶数结构体比较。
 - Playground 页面：输入公式，查看生成的代码，绘制值和梯度。
 - 更多优化：跨求和项的公因子提取。
 

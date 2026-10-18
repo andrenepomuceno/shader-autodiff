@@ -42,6 +42,57 @@ export function randomExpression(next, depth) {
   return forms[Math.floor(next() * forms.length)]();
 }
 
+/**
+ * Fields in x, y, z with parameters a, b, t for the benchmarks: realistic SDFs (from the three.js
+ * example presets), the Schwarzschild lens metric component, and the heaviest random expressions
+ * of `randomExpression`.
+ */
+export function benchmarkFields() {
+  const fields = [
+    { id: 'sphere', expression: 'sqrt(x^2 + y^2 + z^2) - 1' },
+    {
+      id: 'torus-ball-smin',
+      derived: {
+        q: '2*a*x + 0.5*t',
+        yr: 'y*cos(q) - z*sin(q)',
+        zr: 'y*sin(q) + z*cos(q)',
+        torus: 'max(abs(sqrt(x^2 + zr^2) - 1), abs(yr)) - 0.2',
+        ball: 'sqrt(x^2 + (y - 0.7*sin(t))^2 + z^2) - 0.55',
+        k: '0.05 + 0.5*b',
+        h: 'clamp(0.5 + 0.5*(ball - torus)/k, 0, 1)',
+      },
+      expression: 'mix(ball, torus, h) - k*h*(1 - h)',
+    },
+    {
+      id: 'gyroid-ball',
+      derived: {
+        k: '4 + 4*a',
+        g: 'sin(k*x + t)*cos(k*y) + sin(k*y)*cos(k*z) + sin(k*z)*cos(k*x + t)',
+        shell: 'abs(g)/k - 0.01 - 0.06*b',
+      },
+      expression: 'max(shell, sqrt(x^2 + y^2 + z^2) - 1.2)',
+    },
+    {
+      id: 'blobs-lse',
+      derived: {
+        r: '0.3 + 0.3*a',
+        s1: 'sqrt((x - cos(t))^2 + y^2 + (z - sin(t))^2) - r',
+        s2: 'sqrt((x + cos(t))^2 + (y - 0.5*sin(1.3*t))^2 + (z + sin(t))^2) - r',
+        s3: 'sqrt(x^2 + (y - 0.8*cos(0.7*t))^2 + z^2) - r',
+        k: '2 + 14*(1 - b)',
+      },
+      expression: '-log(exp(-k*s1) + exp(-k*s2) + exp(-k*s3))/k',
+    },
+    { id: 'schwarzschild', expression: '(1 + a/(2*sqrt(x^2 + y^2 + z^2 + b^2)))^4' },
+  ];
+  // Random expressions guard denominators with `1.5 + a * b`, which only holds for positive inputs:
+  // `domain` is the box the precision test samples (the SDFs use [-2, 2]³).
+  const next = random(2028);
+  const draws = Array.from({ length: 30 }, () => randomExpression(next, 6)).sort((a, b) => b.length - a.length);
+  draws.slice(0, 3).forEach((expression, index) => fields.push({ id: `random-${index + 1}`, expression, domain: [0.3, 2.3] }));
+  return fields;
+}
+
 /** Error of `actual` against `expected`, relative to the size of the reference group. */
 export function groupError(actual, expected) {
   const scale = 1 + Math.max(...expected.map(Math.abs));

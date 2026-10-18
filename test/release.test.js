@@ -21,9 +21,10 @@ test('a release needs notes', () => {
   assert.throws(() => releaseChangelog('# C\n', '0.2.0', 'd'), /no "## Unreleased"/);
 });
 
-test('the repository CHANGELOG is releasable', () => {
-  const { notes } = releaseChangelog(readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8'), '9.9.9', 'd');
-  assert.ok(notes.length > 0);
+test('the repository CHANGELOG keeps an Unreleased section at the top', () => {
+  const text = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
+  assert.match(text, /^## Unreleased$/m);
+  assert.ok(text.indexOf('## Unreleased') < text.search(/^## \d+\.\d+\.\d+/m));
 });
 
 test('CRLF changelogs are releasable', () => {

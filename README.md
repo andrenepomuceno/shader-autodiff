@@ -103,10 +103,15 @@ few KB.**
 (`metricTensor` + `metricPartials`) so the app can run fully static. Every metric preset matches the
 sympy values on the CPU (to 1e-10) and on the GPU (WebGL2 and WebGPU, within float32 accuracy).
 
+## Benchmarks
+
+[docs/benchmarks.md](docs/benchmarks.md): per-pixel cost and float32 precision of exact derivatives
+against finite differences and sympy-generated code on the GPU (WebGL2 and WebGPU), plus compile
+time, JS throughput and emitted size on the CPU.
+
 ## Roadmap
 
-- Benchmarks: per-pixel cost of value + gradient for SDFs and metrics, generated code vs finite
-  differences vs glsl-autodiff structs vs sympy-generated code, on desktop and mobile GPUs.
+- Benchmarks on more GPUs (mobile, integrated) and against glsl-autodiff dual structs.
 - Playground page: type a formula, see the code, plot value and gradient.
 - More optimisation: common-factor extraction across sums.
 

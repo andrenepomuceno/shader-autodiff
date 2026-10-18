@@ -77,9 +77,15 @@ O nicho: **string de entrada, GLSL/WGSL + JS otimizados e com derivadas de saíd
 
 [metric-shaders](examples/metric-shaders/metric.js): o adaptador substitui o compilador de métricas baseado em sympy (`metricTensor` + `metricPartials`), para que o app possa rodar de forma totalmente estática. Todos os presets de métrica coincidem com os valores do sympy na CPU (até 1e-10) e na GPU (WebGL2 e WebGPU, dentro da precisão de float32).
 
+## Benchmarks
+
+[docs/benchmarks.md](docs/benchmarks.md): custo por pixel e precisão em float32 das derivadas exatas
+contra diferenças finitas e código gerado pelo sympy na GPU (WebGL2 e WebGPU), além de tempo de
+compilação, throughput em JS e tamanho do código emitido na CPU.
+
 ## Próximos passos
 
-- Benchmarks: custo por pixel de valor + gradiente para SDFs e métricas, comparando código gerado, diferenças finitas, structs do glsl-autodiff e código gerado pelo sympy, em GPUs de desktop e de dispositivos móveis.
+- Benchmarks em mais GPUs (móveis, integradas) e contra as structs duais do glsl-autodiff.
 - Página de playground: digite uma fórmula, veja o código e plote o valor e o gradiente.
 - Mais otimização: extração de fatores comuns entre somas.
 

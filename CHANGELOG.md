@@ -6,6 +6,9 @@ temporaries) is part of the public API.
 
 ## Unreleased
 
+- Benchmarks: GPU cost and float32 precision page (`tools/gpu/bench.html`), CPU benchmark
+  (`tools/bench-cpu.mjs`), results in `docs/benchmarks.md`.
+
 ## 0.1.0 - 2026-10-18
 
 First public release.

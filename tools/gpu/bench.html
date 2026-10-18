@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GPU benchmarks</title>
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; background: #fff; color: #111; }
+    pre { white-space: pre; overflow-x: auto; }
+    .fail { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h1>GPU benchmarks</h1>
+  <p>Per-pixel cost of value, exact gradient and finite differences (WebGL2 and WebGPU), and float32
+  precision of exact derivatives against finite differences at several ε (WebGL2), for the fields of
+  <code>cases.js</code> and the metric-shaders presets. Results also land in <code>window.benchResults</code>.</p>
+  <pre id="log">running…</pre>
+  <pre id="report"></pre>
+  <script type="module" src="./bench.js"></script>
+</body>
+</html>

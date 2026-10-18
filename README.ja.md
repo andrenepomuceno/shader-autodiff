@@ -77,9 +77,13 @@ three.js のノードマテリアルと `WebGPURenderer` 向けには、`g.tsl(T
 
 [metric-shaders](examples/metric-shaders/metric.js): このアダプターは sympy ベースの計量コンパイラー（`metricTensor` + `metricPartials`）を置き換え、アプリを完全に静的に実行できるようにします。すべての計量プリセットが、CPU 上では sympy の値と（1e-10 まで）、GPU 上（WebGL2 と WebGPU）では float32 の精度の範囲内で一致します。
 
+## ベンチマーク
+
+[docs/benchmarks.md](docs/benchmarks.md): GPU(WebGL2 と WebGPU)上での、厳密な導関数の有限差分および sympy 生成コードに対するピクセルあたりのコストと float32 精度、そして CPU 上でのコンパイル時間、JS のスループット、生成コードのサイズ。
+
 ## ロードマップ
 
-- ベンチマーク: SDF と計量について、値 + 勾配のピクセルあたりのコストを、生成コード、有限差分、glsl-autodiff の構造体、sympy 生成コードの間で、デスクトップ GPU とモバイル GPU の両方で比較します。
+- より多くの GPU(モバイル、内蔵)でのベンチマークと、glsl-autodiff の双対数構造体との比較。
 - プレイグラウンドページ: 数式を入力すると、生成コードが表示され、値と勾配がプロットされます。
 - さらなる最適化: 和にまたがる共通因子の抽出。
 

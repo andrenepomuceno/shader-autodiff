@@ -41,7 +41,8 @@ Errors are the largest entry-wise difference against the float64 reference, divi
 `1 + max |reference|` of the value, gradient, Hessian or matrix being compared. The page prints
 `PASS` when everything is below 1e-3 and leaves the details in `window.gpuResults`.
 
-Cases shared by the GPU pages live in `tools/gpu/cases.js`.
+Cases shared by the GPU pages live in `tools/gpu/cases.js`. Cost and precision measurements
+(`/tools/gpu/bench.html`) are reported in [benchmarks.md](benchmarks.md).
 
 ### three.js TSL (manual)
 
