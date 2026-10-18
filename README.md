@@ -19,6 +19,9 @@ g.wgsl('conformal')
 g.evaluate({ x, y, z, a, b, t })        // { value, gradient, hessian? } in JS, same AST
 ```
 
+Implemented so far: parser, JS evaluator and emitter, GLSL ES 3.00 emitter, orders 0 and 1. See
+[docs/api.md](docs/api.md) for the current API and the emitted code contract.
+
 ## Why
 
 - **Exact, cheap derivatives on the GPU.** SDF normals, metric partials (Christoffel symbols),

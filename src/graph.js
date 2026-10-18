@@ -56,10 +56,15 @@ export class Graph {
     if (values.every((value) => value !== undefined)) {
       return this.constant(OPERATIONS[op].evaluate(...values));
     }
-    const simplified = this.simplify(op, args);
+    const ordered = COMMUTATIVE.has(op) ? [...args].sort((a, b) => this.rank(a) - this.rank(b)) : args;
+    const simplified = this.simplify(op, ordered);
     if (simplified !== undefined) return simplified;
-    const ordered = COMMUTATIVE.has(op) ? [...args].sort((a, b) => a - b) : args;
     return this.intern({ op, args: ordered });
+  }
+
+  /** Commutative operands are ordered constants first, then by id. */
+  rank(id) {
+    return this.nodes[id].op === 'const' ? -1 : id;
   }
 
   simplify(op, [a, b]) {
@@ -70,6 +75,7 @@ export class Graph {
         if (this.isConstant(a, 0)) return b;
         if (this.isConstant(b, 0)) return a;
         if (a === b) return this.mul(this.constant(2), a);
+        if (this.constantValue(a) < 0) return this.sub(b, this.constant(-nodeA.value));
         if (nodeB.op === 'neg') return this.sub(a, nodeB.args[0]);
         if (nodeA.op === 'neg') return this.sub(b, nodeA.args[0]);
         return undefined;
@@ -78,6 +84,7 @@ export class Graph {
         if (this.isConstant(a, 0)) return this.neg(b);
         if (a === b) return this.constant(0);
         if (nodeB.op === 'neg') return this.add(a, nodeB.args[0]);
+        if (this.constantValue(b) < 0) return this.add(a, this.constant(-nodeB.value));
         return undefined;
       case 'mul':
         if (this.isConstant(a, 0) || this.isConstant(b, 0)) return this.constant(0);
@@ -85,11 +92,15 @@ export class Graph {
         if (this.isConstant(b, 1)) return a;
         if (this.isConstant(a, -1)) return this.neg(b);
         if (this.isConstant(b, -1)) return this.neg(a);
+        if (nodeA.op === 'const' && nodeB.op === 'mul' && this.constantValue(nodeB.args[0]) !== undefined) {
+          return this.mul(this.constant(nodeA.value * this.constantValue(nodeB.args[0])), nodeB.args[1]);
+        }
         return this.hoistNegation('mul', nodeA, nodeB);
       case 'div':
         if (this.isConstant(b, 1)) return a;
         if (this.isConstant(b, -1)) return this.neg(a);
         if (this.isConstant(a, 0)) return this.constant(0);
+        if (this.constantValue(a) < 0) return this.neg(this.div(this.constant(-nodeA.value), b));
         return this.hoistNegation('div', nodeA, nodeB);
       case 'neg':
         if (nodeA.op === 'neg') return nodeA.args[0];
