@@ -15,6 +15,12 @@
   relative to the matrix size. Regenerate with
   `<metric-shaders>/.venv/Scripts/python tools/metric-shaders/reference.py --metric-shaders <metric-shaders> --out test/fixtures/metric-shaders.json`.
 
+- **sympy on random expressions.** `test/fixtures/sympy-random.json` holds 200 random,
+  domain-guarded expressions of the grammar (59 with `abs`/`min`/`max`/`atan2`) and the exact
+  value, gradient and Hessian from sympy at ~600 points. Every entry must match to 1e-9 relative
+  to `1 + |reference|`; the largest observed error is 1e-12. Regenerate with
+  `<metric-shaders>/.venv/Scripts/python -B tools/sympy/random-expressions.py --out test/fixtures/sympy-random.json`.
+
 ## GPU agreement (manual)
 
 ```bash
