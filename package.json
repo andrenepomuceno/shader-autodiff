@@ -1,6 +1,6 @@
 {
   "name": "shader-autodiff",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Compile user-typed math expressions to GLSL/WGSL/JS that compute exact derivatives in one pass",
   "keywords": ["glsl", "wgsl", "webgl", "webgpu", "shader", "autodiff", "automatic-differentiation", "gradient", "hessian", "jacobian", "sdf", "threejs", "math", "parser"],
   "license": "MIT",

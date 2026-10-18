@@ -6,6 +6,8 @@ temporaries) is part of the public API.
 
 ## Unreleased
 
+## 0.1.0 - 2026-10-18
+
 First public release.
 
 - `compile(text, options)`: value, gradient (`order: 1`) and exactly symmetric Hessian
@@ -24,3 +26,4 @@ First public release.
 - TypeScript declarations (`types/index.d.ts`).
 - Validated against sympy (metric-shaders presets and random expressions) and on the GPU (WebGL2,
   WebGPU and three.js TSL readback).
+
