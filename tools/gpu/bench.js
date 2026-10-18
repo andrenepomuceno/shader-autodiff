@@ -5,12 +5,15 @@ import { compile } from '../../src/index.js';
 import { compileMetric } from '../../examples/metric-shaders/metric.js';
 import { benchmarkFields, groupError, random } from './cases.js';
 
-const SIZE = 2048; // cost target side: one point per pixel per iteration
+// Slower GPUs can shrink the run from the URL, e.g. bench.html?size=512&dispatches=4; costs stay
+// per pixel, so they remain comparable.
+const query = new URLSearchParams(location.search);
+const SIZE = Number(query.get('size') ?? 2048); // cost target side: one point per pixel per iteration
 const ITERATIONS = 16; // evaluations per pixel per frame, at points shifted by i * DELTA
 const ROUNDS = 3; // variants are interleaved round-robin; ROUNDS × FRAMES timed frames per variant
 const FRAMES = 5;
 const WARMUP = 2;
-const DISPATCHES = 32; // WebGPU: dispatches per timed pass, because Chrome quantizes timestamps
+const DISPATCHES = Number(query.get('dispatches') ?? 32); // WebGPU: dispatches per timed pass, because Chrome quantizes timestamps
 const PIXELS = SIZE * SIZE;
 const EPSILONS = [1e-1, 1e-2, 1e-3, 1e-4];
 const POINTS_SIDE = 64; // precision: POINTS_SIDE² random points per case
