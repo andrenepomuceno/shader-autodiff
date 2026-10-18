@@ -29,8 +29,8 @@ but nothing in `src/` may depend on them.
 
 ## Task workflow
 
-- Pending work: one Markdown file per task in `tasks-inbox/`; move it to `tasks-done/` (`git mv`)
-  in the same commit as the work.
+- Pending work: one Markdown file per task in `tasks-inbox/`; move it to `tasks-done/` when the
+  work is committed. Both folders are local only (git-ignored).
 - Commit in small, coherent steps.
 
 ## Subagents

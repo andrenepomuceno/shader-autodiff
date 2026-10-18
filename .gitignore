@@ -1,3 +1,5 @@
 node_modules/
 coverage/
 .claude/worktrees/
+tasks-inbox/
+tasks-done/
