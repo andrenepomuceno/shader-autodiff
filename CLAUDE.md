@@ -30,3 +30,9 @@ but nothing in `src/` may depend on them.
 - Pending work: one Markdown file per task in `tasks-inbox/`; move it to `tasks-done/` (`git mv`)
   in the same commit as the work.
 - Commit in small, coherent steps.
+
+## Subagents
+
+Up to 5 parallel subagents, no nested agents. Pick the model by task difficulty
+(haiku for simple/mechanical, sonnet for standard, opus for hard math/shaders).
+Fable is not used in this project.
