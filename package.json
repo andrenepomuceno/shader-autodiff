@@ -1,0 +1,14 @@
+{
+  "name": "shader-autodiff",
+  "version": "0.0.0",
+  "description": "Compile user-typed math expressions to GLSL/WGSL/JS that compute exact derivatives in one pass",
+  "type": "module",
+  "exports": "./src/index.js",
+  "files": ["src"],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
