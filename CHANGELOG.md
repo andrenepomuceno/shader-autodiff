@@ -6,6 +6,8 @@ temporaries) is part of the public API.
 
 ## Unreleased
 
+## 0.2.0 - 2026-10-19
+
 - Algebraic normal form for arithmetic: like terms combine and cancel, `sin² + cos² = 1`,
   `sqrt(q)² = q`, monic sums shared across scalar multiples. Metric partials went from a median
   1.45× (at most 2.10×) the cost of the sympy-generated GLSL to 1.07× (at most 1.14×); twist,
