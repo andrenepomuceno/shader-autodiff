@@ -13,9 +13,11 @@ temporaries) is part of the public API.
   cheaper.
 - Headless GPU checks and benchmarks on a chosen GPU: `npm run test:gpu`, `npm run bench:gpu`
   (`--adapter=GPU2` or a name part).
-
 - Benchmarks: GPU cost and float32 precision page (`tools/gpu/bench.html`), CPU benchmark
   (`tools/bench-cpu.mjs`), results in `docs/benchmarks.md`.
+- `examples/tsl`: `WebGPURenderer` node material with a typed height field or warp, exact per-pixel
+  normals from `tsl()`, self-checked headless on WebGPU and the WebGL2 fallback by `npm run test:gpu`.
+- Examples share one editor module (`examples/shared/`); repeating a `name = …` line is now an error.
 
 ## 0.1.0 - 2026-10-18
 

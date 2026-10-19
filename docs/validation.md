@@ -35,7 +35,11 @@ node tools/gpu/serve.mjs                 # or open http://127.0.0.1:8137/tools/g
 
 `tools/gpu/check.mjs` starts the static server, runs the agreement page and the TSL page in a separate
 headless Chrome (its own temporary profile, no window, no extension) through the DevTools protocol,
-prints their logs and fails if either fails. `--adapter` resolves the GPU to its LUID at run time and
+prints their logs and fails if either fails. It then loads the TSL example (`/examples/tsl/?check`,
+and `?check&webgl` for the WebGL2 fallback), which renders every preset into a 128×128 target with
+exact and with finite-difference normals: the surface must cover at least 5 % of the image, the two
+images must agree to 1.5/255 on average (they agree to 0.00/255 on the RTX 5060 Ti, ε = 10⁻³), and three
+must log no error or warning. `--adapter` resolves the GPU to its LUID at run time and
 passes `--use-adapter-luid` to Chrome, which both WebGL (ANGLE) and WebGPU (Dawn) honour; on a
 machine with a second, monitorless GPU this keeps checks and benchmarks off the desktop's GPU. The
 whole check takes about 15 s.

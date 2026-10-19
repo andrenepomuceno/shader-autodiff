@@ -44,6 +44,7 @@ three.js のノードマテリアルと `WebGPURenderer` 向けには、`g.tsl(T
 ## 例
 
 - [examples/three](examples/three/): 入力した SDF をレイマーチングする three.js のレイマーチャーです。法線は厳密な勾配から求め、ステップ幅も勾配でスケールします（そのため、距離場でないフィールドでも安全にマーチングできます）。リポジトリのルートを配信（`node tools/gpu/serve.mjs`）し、`/examples/three/` を開いてください。
+- [examples/tsl](examples/tsl/): three.js の `WebGPURenderer`（WebGPU、または `?webgl` で WebGL2 フォールバック）を使う例です。`MeshStandardNodeMaterial` の `positionNode` とピクセル単位の `normalNode` を `tsl()` から設定します。高さ場 h(x, z) を入力するか、球・箱・棒を変形するワープ X, Y, Z を入力すると、法線は厳密なヤコビ行列で変換されます。同じサーバーで `/examples/tsl/` を開いてください。
 - [examples/metric-shaders](examples/metric-shaders/metric.js): 測地線レイトレーシング向けの計量テンソルとその偏導関数です。入れ子の導関数によるプルバック計量も含みます。
 
 ## 目的

@@ -44,6 +44,7 @@ g.evaluate({ x, y, z, a, b, t })        // { value, gradient } computed from the
 ## 示例
 
 - [examples/three](examples/three/)：一个针对用户输入的 SDF 的 three.js 光线步进（raymarching）渲染器，法线取自精确梯度，步长也按梯度缩放（因此即使不是真正的距离场也能安全步进）。在仓库根目录启动服务（`node tools/gpu/serve.mjs`），然后打开 `/examples/three/`。
+- [examples/tsl](examples/tsl/)：使用 three.js `WebGPURenderer` 的示例（WebGPU，或用 `?webgl` 切换到 WebGL2 回退），其 `MeshStandardNodeMaterial` 的 `positionNode` 和逐像素 `normalNode` 都来自 `tsl()`：输入高度场 h(x, z)，或对球体、立方体、长条施加的变形 X, Y, Z，其法线通过精确雅可比矩阵变换。在同一服务上打开 `/examples/tsl/`。
 - [examples/metric-shaders](examples/metric-shaders/metric.js)：用于测地线光线追踪的度规张量及其偏导数，包括由嵌套导数得到的拉回度规。
 
 ## 为什么需要它

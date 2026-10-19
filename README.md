@@ -52,6 +52,10 @@ low-level API for structured outputs (several functions sharing one graph, neste
 - [examples/three](examples/three/): a three.js raymarcher for SDFs you type, with normals from the
   exact gradient and steps scaled by it (so even non-distance fields march safely). Serve the repo
   root (`node tools/gpu/serve.mjs`) and open `/examples/three/`.
+- [examples/tsl](examples/tsl/): a three.js `WebGPURenderer` example (WebGPU, or `?webgl` for the
+  WebGL2 fallback) whose `MeshStandardNodeMaterial` gets its `positionNode` and per-pixel
+  `normalNode` from `tsl()`: type a height field h(x, z), or a warp X, Y, Z of a sphere, box or bar
+  whose normals map through the exact Jacobian. Open `/examples/tsl/` on the same server.
 - [examples/metric-shaders](examples/metric-shaders/metric.js): metric tensors and their partials
   for geodesic ray tracing, including pullback metrics from nested derivatives.
 

@@ -52,6 +52,10 @@ g.evaluate({ x, y, z, a, b, t })        // { value, gradient } computed from the
 - [examples/three](examples/three/): рэймарчер на three.js для SDF, которые вы вводите сами; нормали берутся из
   точного градиента, а длина шагов масштабируется им (поэтому даже поля, не являющиеся расстояниями, марчатся безопасно). Запустите сервер из корня
   репозитория (`node tools/gpu/serve.mjs`) и откройте `/examples/three/`.
+- [examples/tsl](examples/tsl/): пример с `WebGPURenderer` из three.js (WebGPU или `?webgl` для запасного
+  WebGL2), в котором `positionNode` и попиксельный `normalNode` материала `MeshStandardNodeMaterial`
+  строятся через `tsl()`: введите карту высот h(x, z) или деформацию X, Y, Z сферы, куба или бруска,
+  нормали которой преобразуются точным якобианом. Откройте `/examples/tsl/` на том же сервере.
 - [examples/metric-shaders](examples/metric-shaders/metric.js): метрические тензоры и их частные производные
   для трассировки геодезических лучей, включая метрики-обратные образы (pullback) из вложенных производных.
 

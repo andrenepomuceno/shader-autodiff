@@ -77,6 +77,9 @@ const { value, gradient } = sdf.tsl(TSL, { inputs: TSL.positionLocal, parameters
 material.normalNode = TSL.transformNormalToView(TSL.normalize(gradient));
 ```
 
+[examples/tsl](../examples/tsl/) does this for typed height fields and warps, including the normal of
+a warped mesh through the Jacobian (`det(J)·J⁻ᵀ`, built from cross products of its columns).
+
 - `inputs`: a vector node for 2–4 variables (`inputs.x`, `inputs.y`, … in variable order), an array
   of scalar nodes, or an object of scalar nodes by variable name.
 - `parameters`: TSL nodes (uniforms) for every parameter the expressions use.

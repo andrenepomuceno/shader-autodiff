@@ -44,6 +44,7 @@ Para node materials do three.js e o `WebGPURenderer`, `g.tsl(TSL, { inputs: posi
 ## Exemplos
 
 - [examples/three](examples/three/): um raymarcher em three.js para SDFs digitadas por você, com normais obtidas do gradiente exato e passos escalados por ele (assim, até campos que não são distâncias avançam com segurança). Sirva a raiz do repositório (`node tools/gpu/serve.mjs`) e abra `/examples/three/`.
+- [examples/tsl](examples/tsl/): um exemplo com o `WebGPURenderer` do three.js (WebGPU, ou `?webgl` para o fallback WebGL2) cujo `MeshStandardNodeMaterial` recebe o `positionNode` e o `normalNode` por pixel de `tsl()`: digite um campo de altura h(x, z), ou uma deformação X, Y, Z de uma esfera, caixa ou barra, cujas normais são transformadas pela jacobiana exata. Abra `/examples/tsl/` no mesmo servidor.
 - [examples/metric-shaders](examples/metric-shaders/metric.js): tensores métricos e suas derivadas parciais para ray tracing de geodésicas, incluindo métricas de pullback a partir de derivadas aninhadas.
 
 ## Por quê

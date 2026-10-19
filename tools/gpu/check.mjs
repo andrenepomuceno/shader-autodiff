@@ -1,6 +1,7 @@
 // Dev-only: runs the GPU pages headless and reports, with no browser window or extension.
 //
-//   node tools/gpu/check.mjs [--adapter=<GPUn|name>]            GLSL/WGSL and TSL agreement; exit 1 on failure
+//   node tools/gpu/check.mjs [--adapter=<GPUn|name>]            GLSL/WGSL and TSL agreement, TSL example
+//                                                               self-check; exit 1 on failure
 //   node tools/gpu/check.mjs --bench [--adapter=<GPUn|name>] [--query=size=512&dispatches=4]
 //                                                               benchmark tables (Markdown) on stdout
 //   node tools/gpu/check.mjs --list                             GPUs Chrome can use
@@ -18,7 +19,8 @@ if (mode === '--list') {
 }
 
 const server = await startServer(0);
-const base = `http://127.0.0.1:${server.address().port}/tools/gpu`;
+const root = `http://127.0.0.1:${server.address().port}`;
+const base = `${root}/tools/gpu`;
 let failed = false;
 try {
   if (mode === '--bench') {
@@ -37,7 +39,14 @@ try {
       log: document.getElementById('log').textContent,
     } : null`, options);
     console.log(tsl.log);
-    failed = [agreement, tsl].some((result) => result.error || result.failures.length > 0);
+    const examples = [];
+    for (const query of ['check', 'check&webgl']) {
+      const example = await runPage(`${root}/examples/tsl/?${query}`, `window.exampleResults?.done ? window.exampleResults : null`, options);
+      console.log(example.log);
+      for (const failure of example.failures) console.log(`FAIL ${failure}`);
+      examples.push(example);
+    }
+    failed = [agreement, tsl, ...examples].some((result) => result.error || result.failures.length > 0);
   }
 } finally {
   server.close();

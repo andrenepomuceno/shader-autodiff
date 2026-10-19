@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exact-normal TSL surfaces</title>
+  <link rel="stylesheet" href="../shared/editor.css">
+  <style>
+    #error:empty::before { content: 'Lines `name = …` define helpers. End with h(x, z) for a height field, or define X, Y, Z to warp the base mesh.'; color: var(--muted); font-family: system-ui, sans-serif; }
+    #backend { font: 12px var(--mono); font-weight: 400; color: var(--muted); }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+        "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.js",
+        "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.tsl.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <details id="panel" open>
+    <summary>Surface <span id="backend"></span> <span id="fps"></span></summary>
+    <div class="body">
+      <select id="preset" aria-label="Preset"></select>
+      <div class="editor">
+        <div class="backdrop" id="backdrop" aria-hidden="true"></div>
+        <textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Height field or warp" aria-describedby="error"></textarea>
+      </div>
+      <p id="error" role="status"></p>
+      <div class="sliders">
+        <label for="a">a</label><input id="a" type="range" min="0" max="1" step="0.01" value="0.5"><output for="a" id="a-value"></output>
+        <label for="b">b</label><input id="b" type="range" min="0" max="1" step="0.01" value="0.5"><output for="b" id="b-value"></output>
+      </div>
+      <div class="toggles">
+        <label><input id="animate" type="checkbox" checked> animate t</label>
+        <label><input id="finite" type="checkbox"> finite-difference normals</label>
+        <label><input id="wireframe" type="checkbox"> wireframe</label>
+      </div>
+      <details class="code">
+        <summary id="code-summary">Generated shader</summary>
+        <pre><code id="code"></code></pre>
+      </details>
+      <p class="note">A <code>MeshStandardNodeMaterial</code> whose <code>positionNode</code> and
+        <code>normalNode</code> are TSL nodes built by <a href="../../README.md">shader-autodiff</a>;
+        the per-pixel normal comes from the exact gradient or Jacobian. Drag to orbit, scroll to zoom;
+        <a id="switch-backend" href="?webgl">try the WebGL2 fallback</a>.</p>
+    </div>
+  </details>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
