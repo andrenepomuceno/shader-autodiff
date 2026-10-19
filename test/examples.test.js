@@ -36,7 +36,7 @@ const VECTOR_TSL = {
 test('editor text splits into definitions and a final expression with offsets', () => {
   const text = 'r = sqrt(x^2) // radius\n\n  k = 2*r\nk + y';
   const read = readSource(text);
-  assert.deepEqual(read.definitions, { r: 'sqrt(x^2) ', k: '2*r' });
+  assert.deepEqual({ ...read.definitions }, { r: 'sqrt(x^2) ', k: '2*r' });
   assert.equal(text.slice(read.offsets.r, read.offsets.r + 4), 'sqrt');
   assert.equal(text.slice(read.offsets.k, read.offsets.k + 3), '2*r');
   assert.equal(read.expression, 'k + y');
@@ -47,6 +47,9 @@ test('editor text splits into definitions and a final expression with offsets', 
 test('editor text errors: lines after the expression, definitions repeated', () => {
   assert.throws(() => readSource('x + 1\nr = 2'), (error) => error instanceof ExpressionError && error.start === 0 && error.end === 5);
   assert.throws(() => readSource('r = 1\n r = 2\nr'), (error) => error.reason === "'r' is defined twice" && error.start === 7);
+  assert.deepEqual(Object.keys(readSource('__proto__ = x\nx').definitions), ['__proto__']);
+  assert.throws(() => readSource('__proto__ = x\n__proto__ = y\nx'), /'__proto__' is defined twice/);
+  assert.throws(() => compileSurface('__proto__ = x\n__proto__ + 1'), /'__proto__' is reserved/);
 });
 
 test('compile errors are moved to their place in the editor text', () => {
@@ -81,6 +84,9 @@ test('every TSL example preset compiles, as a height field or a warp', () => {
     if (surface.mode === 'warp') assert.equal(surface.base, /base: (\w+)/.exec(text)[1], name);
   }
   assert.equal(compileSurface('X = x\nY = y\nZ = z').base, 'sphere');
+  assert.equal(compileSurface('// base: bar\nX = x\nY = y\nZ = z').base, 'bar');
+  const unknown = '// twist; base: cube\nX = x\nY = y\nZ = z';
+  assert.throws(() => compileSurface(unknown), (error) => /unknown base 'cube'/.test(error.reason) && unknown.slice(error.start, error.end) === 'cube');
   assert.throws(() => compileSurface('X = x\nY = y'), /Z missing/);
   assert.throws(() => compileSurface('r = x'), /end with an expression/);
 });

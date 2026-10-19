@@ -62,6 +62,7 @@ function geometry(base) {
 
 const uniforms = { t: TSL.uniform(0), a: TSL.uniform(0.5), b: TSL.uniform(0.5) };
 const material = new THREE.MeshStandardNodeMaterial({ roughness: 0.42, metalness: 0.05, side: THREE.DoubleSide });
+material.wireframe = elements.wireframe.checked;
 const mesh = new THREE.Mesh(geometry('plane'), material);
 mesh.frustumCulled = false;
 scene.add(mesh);
@@ -80,18 +81,24 @@ function applySurface() {
   material.normalNode = TSL.normalize(TSL.transformNormalToView(normal)).mul(TSL.faceDirection);
   const shade = surface.mode === 'height' ? TSL.smoothstep(-0.25, 0.3, position.y) : TSL.normalize(normal).y.mul(0.5).add(0.5);
   material.colorNode = TSL.mix(TSL.color(0x3d6fb6), TSL.color(0xe0b25c), shade);
-  material.wireframe = elements.wireframe.checked;
   material.needsUpdate = true;
   mesh.geometry = geometry(surface.base);
   showCode();
 }
 
+let codeRequest = 0;
 async function showCode() {
   if (!elements.code.closest('details').open) return;
-  const { fragmentShader } = await renderer.debug.getShaderAsync(scene, camera, mesh);
-  const language = backend === 'WebGPU' ? 'WGSL' : 'GLSL';
-  elements.code.textContent = fragmentShader;
-  elements['code-summary'].textContent = `Generated ${language} fragment shader (${fragmentShader.split('\n').length} lines, by three from the TSL nodes)`;
+  const request = ++codeRequest;
+  try {
+    const { fragmentShader } = await renderer.debug.getShaderAsync(scene, camera, mesh);
+    if (request !== codeRequest) return;
+    const language = backend === 'WebGPU' ? 'WGSL' : 'GLSL';
+    elements.code.textContent = fragmentShader;
+    elements['code-summary'].textContent = `Generated ${language} fragment shader (${fragmentShader.split('\n').length} lines, by three from the TSL nodes)`;
+  } catch (error) {
+    if (request === codeRequest) editor.show(`shader build failed: ${error.message}`);
+  }
 }
 elements.code.closest('details').addEventListener('toggle', showCode);
 
@@ -122,11 +129,13 @@ for (const name of ['a', 'b']) {
   sync();
 }
 
-for (const toggle of [elements.finite, elements.wireframe]) {
-  toggle.addEventListener('change', () => {
-    if (surface) applySurface();
-  });
-}
+elements.finite.addEventListener('change', () => {
+  if (surface) applySurface();
+});
+elements.wireframe.addEventListener('change', () => {
+  material.wireframe = elements.wireframe.checked;
+  material.needsUpdate = true;
+});
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -141,7 +150,7 @@ editor.load(PRESETS[elements.preset.value]);
 if (query.has('check')) {
   const { check } = await import('./check.js');
   try {
-    window.exampleResults = await check({ renderer, scene, camera, mesh, uniforms, editor, elements, backend });
+    window.exampleResults = await check({ renderer, scene, camera, mesh, uniforms, editor, elements, backend, forceWebGL });
   } catch (error) {
     window.exampleResults = { done: true, failures: [String(error?.stack ?? error)], log: `TSL example (${backend}): error` };
   }

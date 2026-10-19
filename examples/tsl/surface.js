@@ -48,26 +48,45 @@ Y = (1 - cos(k*x))/k + w*y*cos(k*x)
 Z = w*z`,
 };
 
-export const BASES = ['plane', 'sphere', 'box', 'bar'];
+const WARP_BASES = ['sphere', 'box', 'bar'];
 const OUTPUTS = ['X', 'Y', 'Z'];
+
+/** The exact program now; the value-only one (finite differences) on first use. */
+function surface(read, mode, base, source, options) {
+  const exact = inEditor(read, () => compile(source, { ...options, order: 1 }));
+  let value = null;
+  return {
+    mode,
+    base,
+    exact,
+    get value() {
+      value ??= compile(source, { ...options, order: 0 });
+      return value;
+    },
+  };
+}
+
+/** The warp's base mesh from a `// … base: <mesh>` comment, sphere by default. */
+function warpBase(text) {
+  const match = /\/\/[^\n]*?\bbase:[ \t]*(\w*)/d.exec(text);
+  if (!match) return 'sphere';
+  const [start, end] = match.indices[1];
+  if (!WARP_BASES.includes(match[1])) {
+    throw new ExpressionError(`unknown base '${match[1]}' (use ${WARP_BASES.join(', ')})`, { start, end });
+  }
+  return match[1];
+}
 
 /**
  * Reads the editor text as a height field y = h(x, z) (the last line is an expression) or as a warp
- * (x, y, z) → (X, Y, Z) (no final expression; X, Y and Z are defined), and compiles it with its
- * derivatives and value-only, for the finite-difference comparison. A `base: <mesh>` note in a
- * comment picks the warp's base mesh.
+ * (x, y, z) → (X, Y, Z) of a base mesh (no final expression; X, Y and Z are defined) and compiles it
+ * with its derivatives.
  */
 export function compileSurface(text) {
   const read = readSource(text);
   const parameters = ['t', 'a', 'b'];
   if (read.expression !== null) {
-    const options = { variables: ['x', 'z'], parameters, derived: read.definitions };
-    return inEditor(read, () => ({
-      mode: 'height',
-      base: 'plane',
-      exact: compile(read.expression, { ...options, order: 1 }),
-      value: compile(read.expression, { ...options, order: 0 }),
-    }));
+    return surface(read, 'height', 'plane', read.expression, { variables: ['x', 'z'], parameters, derived: read.definitions });
   }
   const missing = OUTPUTS.filter((name) => !Object.hasOwn(read.definitions, name));
   if (missing.length === 3) {
@@ -76,14 +95,7 @@ export function compileSurface(text) {
   if (missing.length > 0) throw new ExpressionError(`a warp needs X, Y and Z; ${missing.join(' and ')} missing`, { start: text.length });
   const expressions = Object.fromEntries(OUTPUTS.map((name) => [name, read.definitions[name]]));
   const derived = Object.fromEntries(Object.entries(read.definitions).filter(([name]) => !OUTPUTS.includes(name)));
-  const options = { variables: ['x', 'y', 'z'], parameters, derived };
-  const base = /\bbase:\s*(\w+)/.exec(text)?.[1];
-  return inEditor(read, () => ({
-    mode: 'warp',
-    base: BASES.includes(base) && base !== 'plane' ? base : 'sphere',
-    exact: compile(expressions, { ...options, order: 1 }),
-    value: compile(expressions, { ...options, order: 0 }),
-  }));
+  return surface(read, 'warp', warpBase(text), expressions, { variables: ['x', 'y', 'z'], parameters, derived });
 }
 
 /**

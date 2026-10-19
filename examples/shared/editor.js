@@ -6,8 +6,8 @@ import { ExpressionError } from '../../src/index.js';
  * back. `// …` comments are ignored.
  */
 export function readSource(text) {
-  const definitions = {};
-  const offsets = {};
+  const definitions = Object.create(null);
+  const offsets = Object.create(null);
   let expression = null;
   let lineStart = 0;
   for (const line of text.split('\n')) {

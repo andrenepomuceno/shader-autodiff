@@ -49,6 +49,26 @@
         <a id="switch-backend" href="?webgl">try the WebGL2 fallback</a>.</p>
     </div>
   </details>
+  <script>
+    // ?check: record console errors and warnings, script load failures and uncaught errors from the
+    // start, and report a page that dies before check.js runs instead of letting the runner time out.
+    if (new URLSearchParams(location.search).has('check')) {
+      window.checkLog = [];
+      for (const level of ['error', 'warn']) {
+        const original = console[level];
+        console[level] = (...args) => {
+          window.checkLog.push(args.map(String).join(' '));
+          original.apply(console, args);
+        };
+      }
+      const fail = (message) => {
+        window.checkLog.push(message);
+        window.exampleResults ??= { done: true, failures: [...window.checkLog], log: 'TSL example: the page failed to start' };
+      };
+      addEventListener('error', (event) => fail(event.error?.stack ?? event.message ?? `failed to load ${event.target?.src}`), true);
+      addEventListener('unhandledrejection', (event) => fail(String(event.reason?.stack ?? event.reason)));
+    }
+  </script>
   <script type="module" src="./main.js"></script>
 </body>
 </html>

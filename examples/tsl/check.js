@@ -1,6 +1,7 @@
 // Self-check behind `?check` (run headless by tools/gpu/check.mjs): renders every preset into a small
 // target with exact and with finite-difference normals and compares the images. Both must cover the
-// screen and agree up to the FD rounding, and three must log no shader error.
+// screen and agree up to the FD rounding, the requested backend must be the one running, and nothing
+// may be logged to console.error or console.warn (index.html records them from the page's start).
 import * as THREE from 'three/webgpu';
 import { PRESETS } from './surface.js';
 
@@ -9,15 +10,7 @@ const SIZE = 128;
 const MIN_COVERAGE = 0.05;
 const MAX_MEAN_DIFFERENCE = 1.5;
 
-export async function check({ renderer, scene, camera, mesh, uniforms, editor, elements, backend }) {
-  const logged = [];
-  for (const level of ['error', 'warn']) {
-    const original = console[level];
-    console[level] = (...args) => {
-      logged.push(args.map(String).join(' '));
-      original.apply(console, args);
-    };
-  }
+export async function check({ renderer, scene, camera, mesh, uniforms, editor, elements, backend, forceWebGL }) {
   const target = new THREE.RenderTarget(SIZE, SIZE);
   camera.aspect = 1;
   camera.updateProjectionMatrix();
@@ -39,6 +32,10 @@ export async function check({ renderer, scene, camera, mesh, uniforms, editor, e
 
   const lines = [];
   const failures = [];
+  // WebGPURenderer falls back to WebGL2 silently; a WebGPU run must really be WebGPU.
+  if (!forceWebGL && backend !== 'WebGPU') {
+    failures.push(navigator.gpu ? 'WebGPU is available but the renderer fell back to WebGL2' : 'no WebGPU (navigator.gpu missing)');
+  }
   for (const [name, text] of Object.entries(PRESETS)) {
     if (!editor.load(text)) {
       failures.push(`${name}: ${elements.error.textContent}`);
@@ -70,7 +67,7 @@ export async function check({ renderer, scene, camera, mesh, uniforms, editor, e
     if (!(mean <= MAX_MEAN_DIFFERENCE)) failures.push(`${name}: exact and FD shading differ by ${mean.toFixed(2)}/255 on average`);
   }
   setFinite(false);
-  failures.push(...logged.map((message) => `console: ${message}`));
+  failures.push(...(window.checkLog ?? []).map((message) => `console: ${message}`));
   const log = `TSL example (${backend}): ${Object.keys(PRESETS).length} presets\n${lines.join('\n')}`;
   return { done: true, failures, log };
 }
