@@ -2,7 +2,8 @@
 //
 // Checks a clean, up-to-date main, runs the tests, moves the CHANGELOG "Unreleased" notes under the
 // new version, bumps package.json, commits, tags, publishes to npm, pushes and creates the GitHub
-// release. --dry-run runs every check plus `npm publish --dry-run` and changes nothing.
+// release. --dry-run runs every check, lists the tarball, checks the version is not on npm yet and
+// changes nothing.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -61,7 +62,10 @@ function main() {
   const changelog = releaseChangelog(readFileSync(changelogPath, 'utf8'), version, date);
   run(process.execPath, ['--test']);
 
-  run(npm, ['publish', '--dry-run', '--access', 'public']);
+  // `npm publish --dry-run` would check the current, already published version, so list the tarball
+  // and ask the registry about the new version instead.
+  run(npm, ['pack', '--dry-run']);
+  if (publishedVersion(pkg.name, version)) fail(`${pkg.name}@${version} is already on npm`);
   if (dryRun) {
     console.log(`\nDry run OK. Release notes for v${version}:\n\n${changelog.notes}\n`);
     return;
@@ -86,6 +90,15 @@ function main() {
       `GitHub release failed; v${version} is published. Create it by hand: ${githubRelease}`);
   } finally {
     unlinkSync(notesPath);
+  }
+}
+
+/** The version string if `name@version` is on npm, '' if not (including a package never published). */
+function publishedVersion(name, version) {
+  try {
+    return run(npm, ['view', `${name}@${version}`, 'version'], { capture: true });
+  } catch {
+    return '';
   }
 }
 

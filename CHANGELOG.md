@@ -7,11 +7,11 @@ temporaries) is part of the public API.
 ## Unreleased
 
 - Algebraic normal form for arithmetic: like terms combine and cancel, `sin² + cos² = 1`,
-  `sqrt(q)² = q`, monic sums shared across scalar multiples. Metric partials went from a median 1.45× (at most
-  2.10×) the cost of the sympy-generated GLSL to 1.07× (at most 1.14×); twist, rotating-hallway and
-  city-fold are now faster;
-  twist's dg/dy is identically zero. Emitted code is smaller and the first derivatives of SDFs are
-  cheaper.
+  `sqrt(q)² = q`, monic sums shared across scalar multiples. Metric partials went from a median
+  1.45× (at most 2.10×) the cost of the sympy-generated GLSL to 1.07× (at most 1.14×); twist,
+  rotating-hallway and city-fold are now faster, and twist's dg/dy is identically zero. Emitted code
+  is smaller and the first derivatives of SDFs are cheaper.
+- `scripts/release.mjs --dry-run` works after the first release (it checked the published version).
 - Headless GPU checks and benchmarks on a chosen GPU: `npm run test:gpu`, `npm run bench:gpu`
   (`--adapter=GPU2` or a name part).
 - Benchmarks: GPU cost and float32 precision page (`tools/gpu/bench.html`), CPU benchmark
