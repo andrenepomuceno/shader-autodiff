@@ -10,10 +10,12 @@ Transforme uma expressão matemática digitada em tempo de execução em GLSL/WG
 npm install shader-autodiff
 ```
 
+O pacote é só ES modules. Em CommonJS, use `await import('shader-autodiff')`, ou `require('shader-autodiff')` direto no Node 20.19+ / 22.12+.
+
 Ou direto de um CDN, sem etapa de build (módulos ES puros):
 
 ```js
-import { compile } from 'https://cdn.jsdelivr.net/npm/shader-autodiff@0.1.0/src/index.js';
+import { compile } from 'https://cdn.jsdelivr.net/npm/shader-autodiff@0.2.0/src/index.js';
 ```
 
 As declarações TypeScript acompanham o pacote em `types/index.d.ts`.

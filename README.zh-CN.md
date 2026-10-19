@@ -10,10 +10,12 @@
 npm install shader-autodiff
 ```
 
+本包仅提供 ES 模块。在 CommonJS 中请使用 `await import('shader-autodiff')`，在 Node 20.19+ / 22.12+ 上也可以直接 `require('shader-autodiff')`。
+
 也可以直接从 CDN 引入，无需构建步骤（纯 ES 模块）：
 
 ```js
-import { compile } from 'https://cdn.jsdelivr.net/npm/shader-autodiff@0.1.0/src/index.js';
+import { compile } from 'https://cdn.jsdelivr.net/npm/shader-autodiff@0.2.0/src/index.js';
 ```
 
 TypeScript 类型声明位于 `types/index.d.ts`。

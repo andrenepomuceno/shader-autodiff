@@ -10,10 +10,12 @@
 npm install shader-autodiff
 ```
 
+このパッケージは ES モジュールのみです。CommonJS からは `await import('shader-autodiff')` を使うか、Node 20.19+ / 22.12+ ではそのまま `require('shader-autodiff')` を使えます。
+
 または、ビルド手順なしで CDN から直接読み込めます（素の ES モジュール）。
 
 ```js
-import { compile } from 'https://cdn.jsdelivr.net/npm/shader-autodiff@0.1.0/src/index.js';
+import { compile } from 'https://cdn.jsdelivr.net/npm/shader-autodiff@0.2.0/src/index.js';
 ```
 
 TypeScript の型宣言は `types/index.d.ts` に同梱されています。

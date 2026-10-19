@@ -7,8 +7,9 @@ temporaries) is part of the public API.
 ## Unreleased
 
 - Algebraic normal form for arithmetic: like terms combine and cancel, `sin² + cos² = 1`,
-  `sqrt(q)² = q`, monic sums shared across scalar multiples. Metric partials went from up to 2.1×
-  slower than the sympy-generated GLSL to at most ~1.2× (twist and rotating-hallway now faster);
+  `sqrt(q)² = q`, monic sums shared across scalar multiples. Metric partials went from a median 1.45× (at most
+  2.10×) the cost of the sympy-generated GLSL to 1.07× (at most 1.14×); twist, rotating-hallway and
+  city-fold are now faster;
   twist's dg/dy is identically zero. Emitted code is smaller and the first derivatives of SDFs are
   cheaper.
 - Headless GPU checks and benchmarks on a chosen GPU: `npm run test:gpu`, `npm run bench:gpu`
@@ -18,6 +19,7 @@ temporaries) is part of the public API.
 - `examples/tsl`: `WebGPURenderer` node material with a typed height field or warp, exact per-pixel
   normals from `tsl()`, self-checked headless on WebGPU and the WebGL2 fallback by `npm run test:gpu`.
 - Examples share one editor module (`examples/shared/`); repeating a `name = …` line is now an error.
+- README: CommonJS consumers use `import()`, or `require()` on Node 20.19+ / 22.12+.
 
 ## 0.1.0 - 2026-10-18
 

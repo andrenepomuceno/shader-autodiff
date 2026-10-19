@@ -12,10 +12,13 @@ no dependencies, about 15 kB.
 npm install shader-autodiff
 ```
 
+The package is ES modules only. From CommonJS, use `await import('shader-autodiff')`, or plain
+`require('shader-autodiff')` on Node 20.19+ / 22.12+.
+
 Or straight from a CDN, no build step (plain ES modules):
 
 ```js
-import { compile } from 'https://cdn.jsdelivr.net/npm/shader-autodiff@0.1.0/src/index.js';
+import { compile } from 'https://cdn.jsdelivr.net/npm/shader-autodiff@0.2.0/src/index.js';
 ```
 
 TypeScript declarations ship in `types/index.d.ts`.
