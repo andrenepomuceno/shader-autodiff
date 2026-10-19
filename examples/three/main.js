@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { compile, ExpressionError } from '../../src/index.js';
+import { createEditor, inEditor, readSource } from '../shared/editor.js';
 
 const PRESETS = {
   'Twisted torus ∪ ball': `// a: twist, b: blend radius
@@ -49,54 +50,15 @@ const elements = Object.fromEntries(
     .map((id) => [id, document.getElementById(id)]),
 );
 
-/**
- * Splits the editor text into `name = expression` helper lines (compiled as `derived`) and the final
- * expression, keeping each piece's offset in the text so errors can be mapped back.
- */
-function readSource(text) {
-  const derived = {};
-  const offsets = {};
-  let expression = null;
-  let lineStart = 0;
-  for (const line of text.split('\n')) {
-    const code = line.replace(/\/\/.*$/, '');
-    const definition = /^(\s*)([A-Za-z_]\w*)(\s*=\s*)(.*)$/.exec(code);
-    if (code.trim() !== '' && expression) {
-      throw new ExpressionError('only the last line may be an expression (write helpers as `name = …`)', {
-        start: expression.offset,
-        end: expression.offset + expression.text.length,
-      });
-    }
-    if (definition) {
-      const [, indent, name, equals, body] = definition;
-      derived[name] = body;
-      offsets[`derived.${name}`] = lineStart + indent.length + name.length + equals.length;
-    } else if (code.trim() !== '') {
-      expression = { text: code, offset: lineStart };
-    }
-    lineStart += line.length + 1;
-  }
-  if (!expression) throw new ExpressionError('the last line must be the expression f(x, y, z)', { start: text.length });
-  offsets.expression = expression.offset;
-  return { expression: expression.text, derived, offsets };
-}
-
 function buildShaders(text) {
-  const { expression, derived, offsets } = readSource(text);
-  const options = { variables: ['x', 'y', 'z'], parameters: ['t', 'a', 'b'], derived };
+  const read = readSource(text);
+  if (read.expression === null) throw new ExpressionError('the last line must be the expression f(x, y, z)', { start: text.length });
+  const options = { variables: ['x', 'y', 'z'], parameters: ['t', 'a', 'b'], derived: read.definitions };
   const uniforms = { parameters: { t: 'uTime', a: 'uA', b: 'uB' } };
-  try {
-    return {
-      sdf: compile(expression, { ...options, order: 1 }).glsl('sdf', uniforms),
-      sdfValue: compile(expression, { ...options, order: 0 }).glsl('sdfValue', uniforms),
-    };
-  } catch (error) {
-    if (error instanceof ExpressionError && error.source in offsets) {
-      const offset = offsets[error.source];
-      throw new ExpressionError(error.reason, { start: offset + error.start, end: offset + error.end });
-    }
-    throw error;
-  }
+  return inEditor(read, () => ({
+    sdf: compile(read.expression, { ...options, order: 1 }).glsl('sdf', uniforms),
+    sdfValue: compile(read.expression, { ...options, order: 0 }).glsl('sdfValue', uniforms),
+  }));
 }
 
 const vertexShader = /* glsl */ `
@@ -235,74 +197,28 @@ quad.frustumCulled = false;
 const scene = new THREE.Scene();
 scene.add(quad);
 
-renderer.debug.onShaderError = (gl, program, vertex, fragment) => {
-  showError(`GLSL error:\n${gl.getShaderInfoLog(fragment) || gl.getProgramInfoLog(program)}`);
-};
-
-function showError(message, span = null) {
-  elements.error.textContent = message ?? '';
-  elements.source.setAttribute('aria-invalid', String(Boolean(message)));
-  renderBackdrop(span);
-}
-
-/** Mirrors the editor text behind the transparent textarea, with the error span marked. */
-function renderBackdrop(span) {
-  const text = elements.source.value;
-  if (!span) {
-    elements.backdrop.replaceChildren(text, '\n');
-  } else {
-    const marked = text.slice(span.start, Math.max(span.end, span.start + 1));
-    const empty = marked === '' || marked === '\n';
-    const mark = document.createElement('mark');
-    mark.textContent = empty ? ' ' : marked;
-    const rest = text.slice(empty ? span.start : span.start + marked.length);
-    elements.backdrop.replaceChildren(text.slice(0, span.start), mark, rest, '\n');
-  }
-  syncBackdrop();
-}
-
-function syncBackdrop() {
-  elements.backdrop.scrollTop = elements.source.scrollTop;
-  elements.backdrop.scrollLeft = elements.source.scrollLeft;
-}
-
-function update() {
-  let shaders;
-  try {
-    shaders = buildShaders(elements.source.value);
-  } catch (error) {
-    if (error instanceof ExpressionError) {
-      const line = elements.source.value.slice(0, error.start).split('\n').length;
-      showError(`line ${line}: ${error.reason}`, error);
-    } else {
-      showError(error.message);
-    }
-    return;
-  }
-  showError(null);
+const editor = createEditor({
+  source: elements.source,
+  backdrop: elements.backdrop,
+  error: elements.error,
+  onEdit: () => { elements.preset.value = ''; },
+}, (text) => {
+  const shaders = buildShaders(text);
   material.fragmentShader = fragmentShader(shaders);
   material.needsUpdate = true;
-  const code = `${shaders.sdf}\n\n// value only, for the finite-difference normals and ambient occlusion\n${shaders.sdfValue}`;
-  elements.code.textContent = code;
+  elements.code.textContent = `${shaders.sdf}\n\n// value only, for the finite-difference normals and ambient occlusion\n${shaders.sdfValue}`;
   elements['code-summary'].textContent = `Generated GLSL (${shaders.sdf.split('\n').length} lines with gradient)`;
-}
-
-let pending = 0;
-elements.source.addEventListener('input', () => {
-  elements.preset.value = '';
-  renderBackdrop(null);
-  clearTimeout(pending);
-  pending = setTimeout(update, 250);
 });
-elements.source.addEventListener('scroll', syncBackdrop);
+
+renderer.debug.onShaderError = (gl, program, vertex, fragment) => {
+  editor.show(`GLSL error:\n${gl.getShaderInfoLog(fragment) || gl.getProgramInfoLog(program)}`);
+};
 
 const custom = new Option('Custom', '');
 custom.hidden = true;
 elements.preset.append(custom, ...Object.keys(PRESETS).map((name) => new Option(name, name)));
 elements.preset.addEventListener('change', () => {
-  if (!PRESETS[elements.preset.value]) return;
-  elements.source.value = PRESETS[elements.preset.value];
-  update();
+  if (PRESETS[elements.preset.value]) editor.load(PRESETS[elements.preset.value]);
 });
 
 for (const name of ['a', 'b']) {
@@ -348,5 +264,4 @@ renderer.setAnimationLoop((now) => {
 
 if (window.matchMedia('(max-width: 600px)').matches) document.getElementById('panel').open = false;
 elements.preset.value = Object.keys(PRESETS)[0];
-elements.source.value = PRESETS[elements.preset.value];
-update();
+editor.load(PRESETS[elements.preset.value]);
